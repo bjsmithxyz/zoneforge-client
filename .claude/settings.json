@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git remote add origin https://github.com/bjsmithxyz/zoneforge.git)",
+      "Read(//home/beek/Documents/beekVault/personal/projects/ZoneForge/**)",
+      "Bash(cp \"/home/beek/Documents/beekVault/personal/projects/ZoneForge/Detailed Design.md\" /home/beek/repos/ZoneForge/Documentation/)",
+      "Bash(cp \"/home/beek/Documents/beekVault/personal/projects/ZoneForge/Roadmap.md\" /home/beek/repos/ZoneForge/Documentation/)",
+      "Bash(cp \"/home/beek/Documents/beekVault/personal/projects/ZoneForge/Setup Guide.md\" /home/beek/repos/ZoneForge/Documentation/)",
+      "Bash(cp \"/home/beek/Documents/beekVault/personal/projects/ZoneForge/Sprints/Sprint 1.md\" /home/beek/repos/ZoneForge/Documentation/Sprints/)",
+      "Bash(git push)",
+      "Bash(git checkout --orphan clean-main)"
+    ]
+  }
+}
