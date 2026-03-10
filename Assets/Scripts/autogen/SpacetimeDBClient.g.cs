@@ -27,6 +27,7 @@ namespace SpacetimeDB.Types
     {
         public RemoteTables(DbConnection conn)
         {
+            AddTable(EntityInstance = new(conn));
             AddTable(Player = new(conn));
             AddTable(Zone = new(conn));
         }
@@ -525,6 +526,7 @@ namespace SpacetimeDB.Types
 
         internal static string[] AllTablesSqlQueries() => new string[]
         {
+            new QueryBuilder().From.EntityInstance().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.Zone().ToSql(),
         }
@@ -533,6 +535,7 @@ namespace SpacetimeDB.Types
 
     public sealed class From
     {
+        public global::SpacetimeDB.Table<EntityInstance, EntityInstanceCols, EntityInstanceIxCols> EntityInstance() => new("entity_instance", new EntityInstanceCols("entity_instance"), new EntityInstanceIxCols("entity_instance"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<Zone, ZoneCols, ZoneIxCols> Zone() => new("zone", new ZoneCols("zone"), new ZoneIxCols("zone"));
     }
@@ -619,6 +622,7 @@ namespace SpacetimeDB.Types
                 Reducer.CreatePlayer args => Reducers.InvokeCreatePlayer(eventContext, args),
                 Reducer.CreateZone args => Reducers.InvokeCreateZone(eventContext, args),
                 Reducer.MovePlayer args => Reducers.InvokeMovePlayer(eventContext, args),
+                Reducer.SpawnEntity args => Reducers.InvokeSpawnEntity(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
             };
         }

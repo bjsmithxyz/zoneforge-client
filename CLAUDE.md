@@ -35,7 +35,7 @@ Assets/
 # Run from this directory (client/)
 spacetime generate --lang csharp \
   --out-dir Assets/Scripts/autogen \
-  --bin-path ../server/target/wasm32-unknown-unknown/release/zoneforge_server.wasm
+  --bin-path ../server/spacetimedb/target/wasm32-unknown-unknown/release/zoneforge_server.wasm
 ```
 
 **VS Code settings** — Unity auto-generates `.vscode/settings.json` when you run Assets → Open C# Project. Do not overwrite it.

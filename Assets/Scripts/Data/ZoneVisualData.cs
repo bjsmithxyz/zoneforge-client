@@ -1,18 +1,18 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
-public class ZoneVisualData : MonoBehaviour
+[CreateAssetMenu(fileName = "ZoneVisualData", menuName = "ZoneForge/ZoneVisualData")]
+public class ZoneVisualData : ScriptableObject
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    [Header("Identity")]
+    public string ZoneTypeName = "Default";
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    [Header("Default Tiles")]
+    public TileBase DefaultGroundTile;
+    public TileBase DefaultDecorationTile;
+
+    [Header("Atmosphere")]
+    public Color AmbientLightColor = Color.white;
+    [Range(0f, 2f)]
+    public float AmbientLightIntensity = 1f;
 }

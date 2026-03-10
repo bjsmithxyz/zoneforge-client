@@ -31,7 +31,11 @@ public class ConnectionTest : MonoBehaviour
 
         conn.SubscriptionBuilder()
             .OnApplied(OnSubscriptionApplied)
-            .Subscribe(new[] { "SELECT * FROM player" });
+            .Subscribe(new[] {
+                "SELECT * FROM player",
+                "SELECT * FROM zone",
+                "SELECT * FROM entity_instance"
+            });
     }
 
     void OnSubscriptionApplied(SubscriptionEventContext ctx)
