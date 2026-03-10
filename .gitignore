@@ -1,5 +1,6 @@
-# Claude Code local settings
-.claude/
+# Claude Code local settings (skills/ is project config and IS tracked)
+.claude/settings.json
+.claude/settings.local.json
 
 # Unity generated
 [Ll]ibrary/

@@ -112,3 +112,14 @@ Reducer.MovePlayer(conn, newX, newY);
 - **Console** (`Window → General → Console`) — connection and callback logs appear here
 - **Reimport All** (`Assets → Reimport All`) — use if autogen imports don't trigger automatically
 - **Unity generates `.csproj`/`.sln`** — run Assets → Open C# Project once after setup, and again after adding Assembly Definition files
+
+## Claude Skills
+
+Two skills apply when working in this submodule:
+
+| Skill | Triggers on |
+| ----- | ----------- |
+| `unity-spacetimedb-subscribe` | subscribe, callbacks, react to server data, callbacks not firing |
+| `unity-autogen-refresh` | regenerate bindings, spacetime generate, autogen out of date |
+
+Claude loads these automatically. For the full deploy pipeline use the `zoneforge-deploy` skill from the umbrella repo root.
