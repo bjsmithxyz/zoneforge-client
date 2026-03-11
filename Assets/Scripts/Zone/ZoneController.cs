@@ -1,10 +1,10 @@
 using UnityEngine;
-using UnityEngine.Tilemaps;
 using SpacetimeDB.Types;
 
 /// <summary>
-/// Attached to the root Grid GameObject in a zone scene.
-/// Holds server-side zone metadata and references to the three tilemap layers.
+/// Attached to the root Zone GameObject in a zone scene.
+/// Holds server-side zone metadata. The 3D tile grid is managed separately
+/// by the tile placement system — no Tilemaps used in the game client.
 /// </summary>
 public class ZoneController : MonoBehaviour
 {
@@ -13,11 +13,6 @@ public class ZoneController : MonoBehaviour
     public string ZoneName;
     public uint GridWidth;
     public uint GridHeight;
-
-    [Header("Tilemap Layers")]
-    public Tilemap GroundLayer;
-    public Tilemap DecorationLayer;
-    public Tilemap CollisionLayer;
 
     [Header("Visual Config")]
     public ZoneVisualData VisualData;
@@ -39,10 +34,10 @@ public class ZoneController : MonoBehaviour
     {
         if (GridWidth == 0 || GridHeight == 0) return;
 
-        // Draw zone bounds as a wire cube centred on the grid origin
+        // Draw zone bounds as a wire cube on the X/Z plane (Y = up)
         Gizmos.color = Color.cyan;
-        Vector3 size = new Vector3(GridWidth, GridHeight, 0.1f);
-        Vector3 centre = transform.position + new Vector3(GridWidth * 0.5f, GridHeight * 0.5f, 0f);
+        Vector3 size = new Vector3(GridWidth, 0.1f, GridHeight);
+        Vector3 centre = transform.position + new Vector3(GridWidth * 0.5f, 0f, GridHeight * 0.5f);
         Gizmos.DrawWireCube(centre, size);
     }
 }
