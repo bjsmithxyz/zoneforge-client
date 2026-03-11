@@ -25,7 +25,7 @@ Run from the **`client/`** directory:
 cd client && spacetime generate \
   --lang csharp \
   --out-dir Assets/Scripts/autogen \
-  --bin-path ../server/target/wasm32-unknown-unknown/release/zoneforge_server.wasm
+  --bin-path ../server/spacetimedb/target/wasm32-unknown-unknown/release/zoneforge_server.wasm
 ```
 
 The `--bin-path` points at the compiled WASM — this must be rebuilt before generating if the schema changed.
@@ -65,7 +65,7 @@ spacetime publish --server local zoneforge-server
 cd ../client && spacetime generate \
   --lang csharp \
   --out-dir Assets/Scripts/autogen \
-  --bin-path ../server/target/wasm32-unknown-unknown/release/zoneforge_server.wasm
+  --bin-path ../server/spacetimedb/target/wasm32-unknown-unknown/release/zoneforge_server.wasm
 ```
 
 Then in Unity: **Assets → Reimport All**.
