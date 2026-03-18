@@ -23,6 +23,8 @@ namespace SpacetimeDB.Types
         public float PositionX;
         [DataMember(Name = "position_y")]
         public float PositionY;
+        [DataMember(Name = "elevation")]
+        public float Elevation;
         [DataMember(Name = "entity_type")]
         public string EntityType;
 
@@ -32,6 +34,7 @@ namespace SpacetimeDB.Types
             string PrefabName,
             float PositionX,
             float PositionY,
+            float Elevation,
             string EntityType
         )
         {
@@ -40,6 +43,7 @@ namespace SpacetimeDB.Types
             this.PrefabName = PrefabName;
             this.PositionX = PositionX;
             this.PositionY = PositionY;
+            this.Elevation = Elevation;
             this.EntityType = EntityType;
         }
 

@@ -12,12 +12,12 @@ namespace SpacetimeDB.Types
 {
     public sealed partial class RemoteReducers : RemoteBase
     {
-        public delegate void CreateZoneHandler(ReducerEventContext ctx, string name, uint width, uint height);
+        public delegate void CreateZoneHandler(ReducerEventContext ctx, string name, uint terrainWidth, uint terrainHeight, float waterLevel);
         public event CreateZoneHandler? OnCreateZone;
 
-        public void CreateZone(string name, uint width, uint height)
+        public void CreateZone(string name, uint terrainWidth, uint terrainHeight, float waterLevel)
         {
-            conn.InternalCallReducer(new Reducer.CreateZone(name, width, height));
+            conn.InternalCallReducer(new Reducer.CreateZone(name, terrainWidth, terrainHeight, waterLevel));
         }
 
         public bool InvokeCreateZone(ReducerEventContext ctx, Reducer.CreateZone args)
@@ -37,8 +37,9 @@ namespace SpacetimeDB.Types
             OnCreateZone(
                 ctx,
                 args.Name,
-                args.Width,
-                args.Height
+                args.TerrainWidth,
+                args.TerrainHeight,
+                args.WaterLevel
             );
             return true;
         }
@@ -52,20 +53,24 @@ namespace SpacetimeDB.Types
         {
             [DataMember(Name = "name")]
             public string Name;
-            [DataMember(Name = "width")]
-            public uint Width;
-            [DataMember(Name = "height")]
-            public uint Height;
+            [DataMember(Name = "terrain_width")]
+            public uint TerrainWidth;
+            [DataMember(Name = "terrain_height")]
+            public uint TerrainHeight;
+            [DataMember(Name = "water_level")]
+            public float WaterLevel;
 
             public CreateZone(
                 string Name,
-                uint Width,
-                uint Height
+                uint TerrainWidth,
+                uint TerrainHeight,
+                float WaterLevel
             )
             {
                 this.Name = Name;
-                this.Width = Width;
-                this.Height = Height;
+                this.TerrainWidth = TerrainWidth;
+                this.TerrainHeight = TerrainHeight;
+                this.WaterLevel = WaterLevel;
             }
 
             public CreateZone()

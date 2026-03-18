@@ -41,15 +41,17 @@ namespace SpacetimeDB.Types
     {
         public global::SpacetimeDB.Col<Zone, ulong> Id { get; }
         public global::SpacetimeDB.Col<Zone, string> Name { get; }
-        public global::SpacetimeDB.Col<Zone, uint> GridWidth { get; }
-        public global::SpacetimeDB.Col<Zone, uint> GridHeight { get; }
+        public global::SpacetimeDB.Col<Zone, uint> TerrainWidth { get; }
+        public global::SpacetimeDB.Col<Zone, uint> TerrainHeight { get; }
+        public global::SpacetimeDB.Col<Zone, float> WaterLevel { get; }
 
         public ZoneCols(string tableName)
         {
             Id = new global::SpacetimeDB.Col<Zone, ulong>(tableName, "id");
             Name = new global::SpacetimeDB.Col<Zone, string>(tableName, "name");
-            GridWidth = new global::SpacetimeDB.Col<Zone, uint>(tableName, "grid_width");
-            GridHeight = new global::SpacetimeDB.Col<Zone, uint>(tableName, "grid_height");
+            TerrainWidth = new global::SpacetimeDB.Col<Zone, uint>(tableName, "terrain_width");
+            TerrainHeight = new global::SpacetimeDB.Col<Zone, uint>(tableName, "terrain_height");
+            WaterLevel = new global::SpacetimeDB.Col<Zone, float>(tableName, "water_level");
         }
     }
 

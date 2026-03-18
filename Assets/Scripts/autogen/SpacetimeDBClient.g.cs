@@ -29,6 +29,7 @@ namespace SpacetimeDB.Types
         {
             AddTable(EntityInstance = new(conn));
             AddTable(Player = new(conn));
+            AddTable(TerrainChunk = new(conn));
             AddTable(Zone = new(conn));
         }
     }
@@ -528,6 +529,7 @@ namespace SpacetimeDB.Types
         {
             new QueryBuilder().From.EntityInstance().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
+            new QueryBuilder().From.TerrainChunk().ToSql(),
             new QueryBuilder().From.Zone().ToSql(),
         }
         ;
@@ -537,6 +539,7 @@ namespace SpacetimeDB.Types
     {
         public global::SpacetimeDB.Table<EntityInstance, EntityInstanceCols, EntityInstanceIxCols> EntityInstance() => new("entity_instance", new EntityInstanceCols("entity_instance"), new EntityInstanceIxCols("entity_instance"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
+        public global::SpacetimeDB.Table<TerrainChunk, TerrainChunkCols, TerrainChunkIxCols> TerrainChunk() => new("terrain_chunk", new TerrainChunkCols("terrain_chunk"), new TerrainChunkIxCols("terrain_chunk"));
         public global::SpacetimeDB.Table<Zone, ZoneCols, ZoneIxCols> Zone() => new("zone", new ZoneCols("zone"), new ZoneIxCols("zone"));
     }
 
@@ -623,6 +626,7 @@ namespace SpacetimeDB.Types
                 Reducer.CreateZone args => Reducers.InvokeCreateZone(eventContext, args),
                 Reducer.MovePlayer args => Reducers.InvokeMovePlayer(eventContext, args),
                 Reducer.SpawnEntity args => Reducers.InvokeSpawnEntity(eventContext, args),
+                Reducer.UpdateTerrainChunk args => Reducers.InvokeUpdateTerrainChunk(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
             };
         }

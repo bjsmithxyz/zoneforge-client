@@ -44,6 +44,7 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Col<EntityInstance, string> PrefabName { get; }
         public global::SpacetimeDB.Col<EntityInstance, float> PositionX { get; }
         public global::SpacetimeDB.Col<EntityInstance, float> PositionY { get; }
+        public global::SpacetimeDB.Col<EntityInstance, float> Elevation { get; }
         public global::SpacetimeDB.Col<EntityInstance, string> EntityType { get; }
 
         public EntityInstanceCols(string tableName)
@@ -53,6 +54,7 @@ namespace SpacetimeDB.Types
             PrefabName = new global::SpacetimeDB.Col<EntityInstance, string>(tableName, "prefab_name");
             PositionX = new global::SpacetimeDB.Col<EntityInstance, float>(tableName, "position_x");
             PositionY = new global::SpacetimeDB.Col<EntityInstance, float>(tableName, "position_y");
+            Elevation = new global::SpacetimeDB.Col<EntityInstance, float>(tableName, "elevation");
             EntityType = new global::SpacetimeDB.Col<EntityInstance, string>(tableName, "entity_type");
         }
     }

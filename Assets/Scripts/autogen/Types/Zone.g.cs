@@ -17,22 +17,26 @@ namespace SpacetimeDB.Types
         public ulong Id;
         [DataMember(Name = "name")]
         public string Name;
-        [DataMember(Name = "grid_width")]
-        public uint GridWidth;
-        [DataMember(Name = "grid_height")]
-        public uint GridHeight;
+        [DataMember(Name = "terrain_width")]
+        public uint TerrainWidth;
+        [DataMember(Name = "terrain_height")]
+        public uint TerrainHeight;
+        [DataMember(Name = "water_level")]
+        public float WaterLevel;
 
         public Zone(
             ulong Id,
             string Name,
-            uint GridWidth,
-            uint GridHeight
+            uint TerrainWidth,
+            uint TerrainHeight,
+            float WaterLevel
         )
         {
             this.Id = Id;
             this.Name = Name;
-            this.GridWidth = GridWidth;
-            this.GridHeight = GridHeight;
+            this.TerrainWidth = TerrainWidth;
+            this.TerrainHeight = TerrainHeight;
+            this.WaterLevel = WaterLevel;
         }
 
         public Zone()

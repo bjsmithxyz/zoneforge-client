@@ -12,12 +12,12 @@ namespace SpacetimeDB.Types
 {
     public sealed partial class RemoteReducers : RemoteBase
     {
-        public delegate void SpawnEntityHandler(ReducerEventContext ctx, ulong zoneId, string prefabName, float x, float y, string entityType);
+        public delegate void SpawnEntityHandler(ReducerEventContext ctx, ulong zoneId, string prefabName, float x, float y, float elevation, string entityType);
         public event SpawnEntityHandler? OnSpawnEntity;
 
-        public void SpawnEntity(ulong zoneId, string prefabName, float x, float y, string entityType)
+        public void SpawnEntity(ulong zoneId, string prefabName, float x, float y, float elevation, string entityType)
         {
-            conn.InternalCallReducer(new Reducer.SpawnEntity(zoneId, prefabName, x, y, entityType));
+            conn.InternalCallReducer(new Reducer.SpawnEntity(zoneId, prefabName, x, y, elevation, entityType));
         }
 
         public bool InvokeSpawnEntity(ReducerEventContext ctx, Reducer.SpawnEntity args)
@@ -40,6 +40,7 @@ namespace SpacetimeDB.Types
                 args.PrefabName,
                 args.X,
                 args.Y,
+                args.Elevation,
                 args.EntityType
             );
             return true;
@@ -60,6 +61,8 @@ namespace SpacetimeDB.Types
             public float X;
             [DataMember(Name = "y")]
             public float Y;
+            [DataMember(Name = "elevation")]
+            public float Elevation;
             [DataMember(Name = "entity_type")]
             public string EntityType;
 
@@ -68,6 +71,7 @@ namespace SpacetimeDB.Types
                 string PrefabName,
                 float X,
                 float Y,
+                float Elevation,
                 string EntityType
             )
             {
@@ -75,6 +79,7 @@ namespace SpacetimeDB.Types
                 this.PrefabName = PrefabName;
                 this.X = X;
                 this.Y = Y;
+                this.Elevation = Elevation;
                 this.EntityType = EntityType;
             }
 
