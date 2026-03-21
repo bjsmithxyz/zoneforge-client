@@ -12,6 +12,8 @@ public class PlayerController : MonoBehaviour
 
     [SerializeField] private float _speed = 5f;
 
+    private Camera _camera;
+
     // Local player: throttled reducer sends
     private Vector3 _lastSentPosition;
     private float _sendTimer;
@@ -36,6 +38,8 @@ public class PlayerController : MonoBehaviour
         transform.position = spawnPos;
         _lastSentPosition = spawnPos;
         _targetPosition = spawnPos;
+        _sendTimer = 0f;
+        _camera = Camera.main;
 
         if (isLocal)
             SpacetimeDBManager.Conn.Reducers.OnMovePlayer += OnMovePlayerResult;
@@ -49,6 +53,7 @@ public class PlayerController : MonoBehaviour
 
     void OnMovePlayerResult(ReducerEventContext ctx, float newX, float newY)
     {
+        if (ctx.Event.CallerIdentity != SpacetimeDBManager.LocalIdentity) return;
         if (ctx.Event.Status is Status.Failed failedStatus)
             Debug.LogWarning($"[PlayerController] MovePlayer failed: {failedStatus.Message}");
     }
@@ -116,6 +121,8 @@ public class PlayerController : MonoBehaviour
         }
 
         float dist = Vector3.Distance(transform.position, serverPos);
+        // Threshold is 2× the max expected drift (5 u/s × 0.1 s send interval = 0.5 u).
+        // Corrections below 1.0 m are ignored to prevent jitter from normal round-trip latency.
         if (dist > 1.0f)
         {
             // Start or restart reconciliation
@@ -134,21 +141,20 @@ public class PlayerController : MonoBehaviour
     void EnforceY() =>
         transform.position = new Vector3(transform.position.x, 1f, transform.position.z);
 
-    static Vector3 GetCameraRelativeInput()
+    Vector3 GetCameraRelativeInput()
     {
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
         if (h == 0f && v == 0f) return Vector3.zero;
 
-        Camera cam = Camera.main;
-        if (cam == null) return Vector3.zero;
+        if (_camera == null) return Vector3.zero;
 
-        Vector3 forward = cam.transform.forward;
+        Vector3 forward = _camera.transform.forward;
         forward.y = 0f;
         if (forward.sqrMagnitude < 0.001f) return Vector3.zero;
         forward.Normalize();
 
-        Vector3 right = cam.transform.right;
+        Vector3 right = _camera.transform.right;
         right.y = 0f;
         right.Normalize();
 
