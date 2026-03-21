@@ -39,24 +39,19 @@ public class PlayerManager : MonoBehaviour
     {
         // Backfill: initial rows arrive before SpacetimeDBManager registers
         // Conn.Db.Player.OnInsert, so OnPlayerInserted never fires for them.
+        bool hasLocalPlayer = false;
         foreach (var player in SpacetimeDBManager.Conn.Db.Player.Iter())
         {
             if (!_players.ContainsKey(player.Id))
                 SpawnPlayer(player);
-        }
-
-        // Call create_player only if no row exists for our identity
-        bool hasLocalPlayer = false;
-        foreach (var player in SpacetimeDBManager.Conn.Db.Player.Iter())
-        {
             if (player.Identity == SpacetimeDBManager.LocalIdentity)
-            {
                 hasLocalPlayer = true;
-                break;
-            }
         }
         if (!hasLocalPlayer)
+        {
+            Debug.Log("[PlayerManager] No local player row found — calling create_player");
             SpacetimeDBManager.Conn.Reducers.CreatePlayer("Player");
+        }
     }
 
     void OnPlayerInserted(Player player)
@@ -68,12 +63,24 @@ public class PlayerManager : MonoBehaviour
     void OnPlayerUpdated(Player oldPlayer, Player newPlayer)
     {
         if (!_players.TryGetValue(newPlayer.Id, out var go)) return;
-        go.GetComponent<PlayerController>().ReceiveServerPosition(newPlayer);
+        var ctrl = go.GetComponent<PlayerController>();
+        if (ctrl == null) { Debug.LogWarning($"[PlayerManager] PlayerController missing on {go.name}"); return; }
+        ctrl.ReceiveServerPosition(newPlayer);
     }
 
     void OnPlayerDeleted(Player player)
     {
         if (!_players.TryGetValue(player.Id, out var go)) return;
+        // If the local player is deleted, detach the camera before destroying the GO
+        if (player.Identity == SpacetimeDBManager.LocalIdentity)
+        {
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                cam.transform.SetParent(null);
+                Debug.LogWarning("[PlayerManager] Local player deleted — camera detached");
+            }
+        }
         Destroy(go);
         _players.Remove(player.Id);
     }
@@ -92,7 +99,7 @@ public class PlayerManager : MonoBehaviour
             AttachCamera(go);
 
         _players[player.Id] = go;
-        Debug.Log($"[PlayerManager] Spawned {go.name} at ({player.PositionX}, {player.PositionY})");
+        Debug.Log($"[PlayerManager] Spawned {go.name} at (X={player.PositionX}, Z={player.PositionY})");
     }
 
     static void AttachCamera(GameObject playerGo)
