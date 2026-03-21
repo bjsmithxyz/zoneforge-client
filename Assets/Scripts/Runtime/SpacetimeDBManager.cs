@@ -7,8 +7,8 @@ public class SpacetimeDBManager : MonoBehaviour
 {
     public static SpacetimeDBManager Instance { get; private set; }
     public static DbConnection Conn { get; private set; }
-
     public static bool IsSubscribed { get; private set; }
+    public static Identity LocalIdentity { get; private set; }
 
     public static event Action OnConnected;
     public static event Action<Zone> OnZoneInserted;
@@ -19,8 +19,6 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<Player, Player> OnPlayerUpdated;
     public static event Action<Player> OnPlayerDeleted;
     public static event Action<TerrainChunk> OnTerrainChunkUpdated;
-
-    public static Identity LocalIdentity { get; private set; }
 
     [SerializeField] private string serverUri = "http://localhost:3000";
     [SerializeField] private string databaseName = "zoneforge-server";
@@ -96,6 +94,8 @@ public class SpacetimeDBManager : MonoBehaviour
 
     void OnDisconnect(DbConnection conn, Exception e)
     {
+        LocalIdentity = default;
+        IsSubscribed = false;
         if (e != null)
             Debug.LogWarning($"[SpacetimeDBManager] Disconnected with error: {e.Message}");
         else
