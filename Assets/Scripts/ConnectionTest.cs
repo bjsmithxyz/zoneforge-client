@@ -40,8 +40,7 @@ public class ConnectionTest : MonoBehaviour
 
     void OnSubscriptionApplied(SubscriptionEventContext ctx)
     {
-        Debug.Log("Subscription applied — calling create_player reducer");
-        ctx.Reducers.CreatePlayer("TestPlayer");
+        Debug.Log("Subscription applied");
     }
 
     void OnConnectError(Exception e)
