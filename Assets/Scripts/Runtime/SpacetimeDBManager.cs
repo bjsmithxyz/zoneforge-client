@@ -17,7 +17,10 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<EntityInstance> OnEntityInserted;
     public static event Action<Player> OnPlayerInserted;
     public static event Action<Player, Player> OnPlayerUpdated;
+    public static event Action<Player> OnPlayerDeleted;
     public static event Action<TerrainChunk> OnTerrainChunkUpdated;
+
+    public static Identity LocalIdentity { get; private set; }
 
     [SerializeField] private string serverUri = "http://localhost:3000";
     [SerializeField] private string databaseName = "zoneforge-server";
@@ -53,6 +56,7 @@ public class SpacetimeDBManager : MonoBehaviour
     void OnConnect(DbConnection conn, Identity identity, string token)
     {
         Debug.Log($"[SpacetimeDBManager] Connected. Identity: {identity}");
+        LocalIdentity = identity;
         conn.SubscriptionBuilder()
             .OnApplied(OnSubscriptionApplied)
             .Subscribe(new[]
@@ -76,6 +80,7 @@ public class SpacetimeDBManager : MonoBehaviour
 
         Conn.Db.Player.OnInsert += (eventCtx, player) => OnPlayerInserted?.Invoke(player);
         Conn.Db.Player.OnUpdate += (eventCtx, oldPlayer, newPlayer) => OnPlayerUpdated?.Invoke(oldPlayer, newPlayer);
+        Conn.Db.Player.OnDelete += (eventCtx, player) => OnPlayerDeleted?.Invoke(player);
 
         Conn.Db.TerrainChunk.OnInsert += (eventCtx, chunk) => OnTerrainChunkUpdated?.Invoke(chunk);
         Conn.Db.TerrainChunk.OnUpdate += (eventCtx, _oldChunk, newChunk) => OnTerrainChunkUpdated?.Invoke(newChunk);
