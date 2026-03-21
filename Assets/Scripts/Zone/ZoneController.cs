@@ -25,8 +25,8 @@ public class ZoneController : MonoBehaviour
     {
         ZoneId = zone.Id;
         ZoneName = zone.Name;
-        GridWidth = zone.GridWidth;
-        GridHeight = zone.GridHeight;
+        GridWidth = zone.TerrainWidth;
+        GridHeight = zone.TerrainHeight;
         gameObject.name = $"Zone_{zone.Name}";
     }
 

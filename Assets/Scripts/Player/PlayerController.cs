@@ -54,8 +54,8 @@ public class PlayerController : MonoBehaviour
     void OnMovePlayerResult(ReducerEventContext ctx, float newX, float newY)
     {
         if (ctx.Event.CallerIdentity != SpacetimeDBManager.LocalIdentity) return;
-        if (ctx.Event.Status is Status.Failed failedStatus)
-            Debug.LogWarning($"[PlayerController] MovePlayer failed: {failedStatus.Message}");
+        if (ctx.Event.Status is Status.Failed(var reason))
+            Debug.LogWarning($"[PlayerController] MovePlayer failed: {reason}");
     }
 
     void Update()
