@@ -72,6 +72,9 @@ public class PlayerController : MonoBehaviour
         {
             transform.position += dir * _speed * Time.deltaTime;
             EnforceY();
+            // Active input takes priority — cancel any in-progress reconciliation
+            // so the server's lagged position doesn't fight the new direction.
+            _reconciling = false;
         }
 
         // 2. Apply reconciliation correction (MoveTowards at fixed speed)
@@ -121,9 +124,13 @@ public class PlayerController : MonoBehaviour
         }
 
         float dist = Vector3.Distance(transform.position, serverPos);
+        // Only reconcile when the player is not pressing keys. While moving, prediction
+        // is authoritative — the server's lagged position would fight the new direction.
+        bool hasInput = Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0f
+                     || Mathf.Abs(Input.GetAxisRaw("Vertical")) > 0f;
         // Threshold is 2× the max expected drift (5 u/s × 0.1 s send interval = 0.5 u).
         // Corrections below 1.0 m are ignored to prevent jitter from normal round-trip latency.
-        if (dist > 1.0f)
+        if (dist > 1.0f && !hasInput)
         {
             // Start or restart reconciliation
             _reconcileTarget = serverPos;

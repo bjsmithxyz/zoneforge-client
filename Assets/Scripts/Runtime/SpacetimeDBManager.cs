@@ -34,12 +34,16 @@ public class SpacetimeDBManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private const string TokenPrefKey = "spacetimedb_token";
+
     void Start()
     {
-        Debug.Log("[SpacetimeDBManager] Connecting...");
+        string savedToken = PlayerPrefs.GetString(TokenPrefKey, null);
+        Debug.Log($"[SpacetimeDBManager] Connecting{(string.IsNullOrEmpty(savedToken) ? " (new identity)" : " (resuming identity)")}...");
         Conn = DbConnection.Builder()
             .WithUri(serverUri)
             .WithDatabaseName(databaseName)
+            .WithToken(savedToken)
             .OnConnect(OnConnect)
             .OnConnectError(OnConnectError)
             .OnDisconnect(OnDisconnect)
@@ -53,6 +57,8 @@ public class SpacetimeDBManager : MonoBehaviour
 
     void OnConnect(DbConnection conn, Identity identity, string token)
     {
+        PlayerPrefs.SetString(TokenPrefKey, token);
+        PlayerPrefs.Save();
         Debug.Log($"[SpacetimeDBManager] Connected. Identity: {identity}");
         LocalIdentity = identity;
         conn.SubscriptionBuilder()
