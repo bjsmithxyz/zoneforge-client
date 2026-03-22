@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using SpacetimeDB.Types;
 
 /// <summary>
@@ -25,6 +26,7 @@ public class PlayerManager : MonoBehaviour
         SpacetimeDBManager.OnPlayerUpdated  += OnPlayerUpdated;
         SpacetimeDBManager.OnPlayerDeleted  += OnPlayerDeleted;
         SpacetimeDBManager.OnConnected      += OnConnected;
+        NavMeshManager.OnNavMeshReady       += OnNavMeshBaked;
     }
 
     void OnDestroy()
@@ -33,6 +35,7 @@ public class PlayerManager : MonoBehaviour
         SpacetimeDBManager.OnPlayerUpdated  -= OnPlayerUpdated;
         SpacetimeDBManager.OnPlayerDeleted  -= OnPlayerDeleted;
         SpacetimeDBManager.OnConnected      -= OnConnected;
+        NavMeshManager.OnNavMeshReady       -= OnNavMeshBaked;
     }
 
     void OnConnected()
@@ -85,6 +88,33 @@ public class PlayerManager : MonoBehaviour
         _players.Remove(player.Id);
     }
 
+    void OnNavMeshBaked()
+    {
+        foreach (var go in _players.Values)
+        {
+            var ctrl = go.GetComponent<PlayerController>();
+            if (ctrl == null || !ctrl.IsLocal) continue;
+            if (go.GetComponent<NavMeshAgent>() != null) continue;  // already added
+            AddNavMeshAgent(go, ctrl);
+        }
+    }
+
+    static void AddNavMeshAgent(GameObject go, PlayerController ctrl)
+    {
+        var agent = go.AddComponent<NavMeshAgent>();
+        agent.speed           = 5f;
+        agent.angularSpeed    = 0f;    // camera-relative input handles facing
+        agent.acceleration    = 100f;  // instant acceleration for responsive feel
+        agent.stoppingDistance = 0f;
+        agent.autoBraking     = false;
+        agent.radius          = 0.5f;
+        agent.height          = 2f;
+        agent.baseOffset      = 1f;    // pivot sits 1 unit above NavMesh (capsule center)
+        agent.updateRotation  = false;
+        ctrl.SetAgent(agent);
+        Debug.Log("[PlayerManager] NavMeshAgent added to local player");
+    }
+
     void SpawnPlayer(Player player)
     {
         bool isLocal = player.Identity == SpacetimeDBManager.LocalIdentity;
@@ -96,7 +126,12 @@ public class PlayerManager : MonoBehaviour
         ctrl.Init(player, isLocal);
 
         if (isLocal)
+        {
             AttachCamera(go);
+            if (NavMeshManager.IsReady)
+                AddNavMeshAgent(go, ctrl);
+            // else OnNavMeshBaked will add the agent once the bake completes
+        }
 
         _players[player.Id] = go;
         Debug.Log($"[PlayerManager] Spawned {go.name} at (X={player.PositionX}, Z={player.PositionY})");

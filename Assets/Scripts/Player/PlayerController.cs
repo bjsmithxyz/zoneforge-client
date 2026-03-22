@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 using SpacetimeDB;
 using SpacetimeDB.Types;
 
@@ -13,6 +14,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float _speed = 5f;
 
     private Camera _camera;
+    private NavMeshAgent _agent;
 
     // Local player: throttled reducer sends
     private Vector3 _lastSentPosition;
@@ -51,6 +53,18 @@ public class PlayerController : MonoBehaviour
             SpacetimeDBManager.Conn.Reducers.OnMovePlayer -= OnMovePlayerResult;
     }
 
+    /// <summary>
+    /// Called by PlayerManager once the NavMesh is baked and a NavMeshAgent
+    /// has been configured on this GameObject. From this point on, all local
+    /// movement goes through the agent so it respects terrain and boundaries.
+    /// </summary>
+    public void SetAgent(NavMeshAgent agent)
+    {
+        _agent = agent;
+        // Snap to the nearest NavMesh point at current position
+        _agent.Warp(transform.position);
+    }
+
     void OnMovePlayerResult(ReducerEventContext ctx, float newX, float newY)
     {
         if (ctx.Event.CallerIdentity != SpacetimeDBManager.LocalIdentity) return;
@@ -70,21 +84,34 @@ public class PlayerController : MonoBehaviour
         Vector3 dir = GetCameraRelativeInput();
         if (dir.sqrMagnitude > 0.001f)
         {
-            transform.position += dir * _speed * Time.deltaTime;
-            EnforceY();
+            if (_agent != null)
+                _agent.Move(dir * _speed * Time.deltaTime);  // NavMesh constrains movement
+            else
+            {
+                transform.position += dir * _speed * Time.deltaTime;
+                EnforceY();
+            }
             // Active input takes priority — cancel any in-progress reconciliation
             // so the server's lagged position doesn't fight the new direction.
             _reconciling = false;
         }
 
-        // 2. Apply reconciliation correction (MoveTowards at fixed speed)
+        // 2. Apply reconciliation correction
         if (_reconciling)
         {
-            transform.position = Vector3.MoveTowards(
-                transform.position, _reconcileTarget, _reconcileSpeed * Time.deltaTime);
-            EnforceY();
-            if (Vector3.Distance(transform.position, _reconcileTarget) < 0.001f)
+            if (_agent != null)
+            {
+                // Warp was already issued in ReceiveServerPosition; just clear the flag
                 _reconciling = false;
+            }
+            else
+            {
+                transform.position = Vector3.MoveTowards(
+                    transform.position, _reconcileTarget, _reconcileSpeed * Time.deltaTime);
+                EnforceY();
+                if (Vector3.Distance(transform.position, _reconcileTarget) < 0.001f)
+                    _reconciling = false;
+            }
         }
 
         // 3. Throttled reducer send (10 Hz, only if moved)
@@ -123,7 +150,12 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        float dist = Vector3.Distance(transform.position, serverPos);
+        // Compare XZ only — the server stores no Y, so serverPos.y is always 1f.
+        // Including Y in the distance check causes false reconciliation when
+        // NavMeshAgent places the player at a different height (e.g. above terrain).
+        float dx = transform.position.x - serverPos.x;
+        float dz = transform.position.z - serverPos.z;
+        float dist = Mathf.Sqrt(dx * dx + dz * dz);
         // Only reconcile when the player is not pressing keys. While moving, prediction
         // is authoritative — the server's lagged position would fight the new direction.
         bool hasInput = Mathf.Abs(Input.GetAxisRaw("Horizontal")) > 0f
@@ -132,10 +164,19 @@ public class PlayerController : MonoBehaviour
         // Corrections below 1.0 m are ignored to prevent jitter from normal round-trip latency.
         if (dist > 1.0f && !hasInput)
         {
-            // Start or restart reconciliation
-            _reconcileTarget = serverPos;
-            _reconcileSpeed = dist / 0.2f; // covers gap in 0.2 s
-            _reconciling = true;
+            if (_agent != null)
+            {
+                // Warp snaps to the nearest NavMesh point at the server XZ position
+                _agent.Warp(new Vector3(serverPos.x, 0f, serverPos.z));
+                _reconciling = false;
+            }
+            else
+            {
+                // Start or restart reconciliation
+                _reconcileTarget = serverPos;
+                _reconcileSpeed  = dist / 0.2f;  // covers gap in 0.2 s
+                _reconciling     = true;
+            }
         }
         else
         {

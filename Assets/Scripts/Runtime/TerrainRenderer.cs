@@ -1,4 +1,4 @@
-// editor/Assets/Scripts/Runtime/TerrainRenderer.cs
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SpacetimeDB.Types;
@@ -7,10 +7,14 @@ using SpacetimeDB.Types;
 /// Builds and maintains the terrain mesh from TerrainChunk rows.
 /// Attach to a GameObject in the scene; assign the TerrainSplatmap material.
 /// TerrainRenderer rebuilds when the active zone changes and patches on chunk updates.
+/// Fires OnMeshBuilt after every full rebuild so NavMeshManager can re-bake.
 /// </summary>
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class TerrainRenderer : MonoBehaviour
 {
+    /// <summary>Fired after every full mesh rebuild. Args: the new Mesh and this Transform.</summary>
+    public static event Action<Mesh, Transform> OnMeshBuilt;
+
     [SerializeField] private Material _terrainMaterial;
 
     private Mesh _mesh;
@@ -154,6 +158,8 @@ public class TerrainRenderer : MonoBehaviour
         BuildSplatTexture();
 
         _renderer.sharedMaterial = _terrainMaterial;
+
+        OnMeshBuilt?.Invoke(_mesh, transform);
     }
 
     float SampleHeight(int gx, int gz)
