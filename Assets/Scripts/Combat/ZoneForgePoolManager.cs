@@ -23,6 +23,7 @@ public class ZoneForgePoolManager : MonoBehaviour
 
     private readonly Dictionary<string, Queue<GameObject>> _pools = new();
     private readonly Dictionary<string, PoolDefinition> _defs = new();
+    private readonly Dictionary<string, int> _totalCreated = new();
 
     void Awake()
     {
@@ -32,11 +33,17 @@ public class ZoneForgePoolManager : MonoBehaviour
 
         foreach (var def in _poolDefinitions)
         {
+            if (def.prefab == null)
+            {
+                Debug.LogError($"[PoolManager] PoolDefinition '{def.key}' has no prefab assigned — skipping.");
+                continue;
+            }
             _defs[def.key] = def;
             var queue = new Queue<GameObject>(def.initialCapacity);
             for (int i = 0; i < def.initialCapacity; i++)
-                queue.Enqueue(CreatePooled(def));
+                queue.Enqueue(CreatePooled(def.key, def));
             _pools[def.key] = queue;
+            _totalCreated[def.key] = def.initialCapacity;
             Debug.Log($"[PoolManager] Pre-allocated {def.initialCapacity}x '{def.key}'");
         }
     }
@@ -63,7 +70,7 @@ public class ZoneForgePoolManager : MonoBehaviour
                 Debug.LogWarning($"[PoolManager] Pool '{key}' exhausted and at max size");
                 return null;
             }
-            go = CreatePooled(def);
+            go = CreatePooled(key, def);
         }
 
         go.SetActive(true);
@@ -73,6 +80,7 @@ public class ZoneForgePoolManager : MonoBehaviour
     /// <summary>Return an object to the pool.</summary>
     public void Return(string key, GameObject go)
     {
+        if (go == null) return;
         if (!_pools.TryGetValue(key, out var queue))
         {
             Destroy(go);
@@ -83,8 +91,10 @@ public class ZoneForgePoolManager : MonoBehaviour
         queue.Enqueue(go);
     }
 
-    private GameObject CreatePooled(PoolDefinition def)
+    private GameObject CreatePooled(string key, PoolDefinition def)
     {
+        if (!_totalCreated.ContainsKey(key)) _totalCreated[key] = 0;
+        _totalCreated[key]++;
         var go = Instantiate(def.prefab, transform);
         go.SetActive(false);
         return go;
@@ -92,8 +102,8 @@ public class ZoneForgePoolManager : MonoBehaviour
 
     private int CountActive(string key)
     {
-        // Approximate: total created minus what's in the queue
-        // Good enough for max-size guard
-        return _defs[key].initialCapacity - (_pools.TryGetValue(key, out var q) ? q.Count : 0);
+        int total = _totalCreated.TryGetValue(key, out var t) ? t : 0;
+        int queued = _pools.TryGetValue(key, out var q) ? q.Count : 0;
+        return total - queued;
     }
 }
