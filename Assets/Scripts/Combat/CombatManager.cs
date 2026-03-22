@@ -47,6 +47,8 @@ public class CombatManager : MonoBehaviour
 
     private void OnCombatLogInserted(CombatLog log)
     {
+        if (SpacetimeDBManager.Conn == null) return;
+
         // Look up the ability — ability_id 0 means DoT tick (no ability row)
         Ability ability = null;
         if (log.AbilityId != 0)
@@ -58,8 +60,10 @@ public class CombatManager : MonoBehaviour
         }
 
         // Determine positions
-        _playerPositions.TryGetValue(log.AttackerId, out var attackerPos);
-        _playerPositions.TryGetValue(log.TargetId, out var targetPos);
+        if (!_playerPositions.TryGetValue(log.AttackerId, out var attackerPos))
+            Debug.LogWarning($"[CombatManager] No position for attacker {log.AttackerId}");
+        if (!_playerPositions.TryGetValue(log.TargetId, out var targetPos))
+            Debug.LogWarning($"[CombatManager] No position for target {log.TargetId}");
 
         if (ability != null && ability.AbilityType == AbilityType.Projectile)
         {
@@ -82,6 +86,8 @@ public class CombatManager : MonoBehaviour
 
     private void OnPlayerUpdated(Player oldPlayer, Player newPlayer)
     {
+        if (SpacetimeDBManager.Conn == null) return;
+
         // Track position for VFX targeting
         _playerPositions[newPlayer.Id] = new Vector3(newPlayer.PositionX, 1f, newPlayer.PositionY);
 
