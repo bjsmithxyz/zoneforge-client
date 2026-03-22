@@ -82,6 +82,19 @@ public class CombatManager : MonoBehaviour
             // Use positioned overload to avoid one-frame wrong-position flash
             ZoneForgePoolManager.Instance?.Get("vfx_impact_generic", targetPos + Vector3.up);
         }
+
+        // Floating damage / heal number above target
+        if (log.DamageDealt != 0)
+        {
+            bool isHeal   = log.DamageDealt < 0;
+            string label  = isHeal ? $"+{-log.DamageDealt}" : $"{log.DamageDealt}";
+            Color  color  = isHeal
+                ? new Color(0.25f, 1f, 0.35f)          // green for heals
+                : new Color(1f,    0.25f, 0.2f);        // red for damage
+            // Slight random X jitter so stacked hits don't overlap exactly
+            var jitter = new Vector3(UnityEngine.Random.Range(-0.4f, 0.4f), 0f, 0f);
+            FloatingTextPopup.Show(targetPos + Vector3.up * 2.5f + jitter, label, color);
+        }
     }
 
     private void OnPlayerUpdated(Player oldPlayer, Player newPlayer)

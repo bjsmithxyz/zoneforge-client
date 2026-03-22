@@ -133,6 +133,11 @@ public class PlayerManager : MonoBehaviour
         mat.color = isLocal ? Color.cyan : Color.red;
         rend.material = mat;
 
+        // Disable the auto-added CapsuleCollider — NavMeshAgent handles movement and
+        // the collider causes projectiles to trigger OnCollisionEnter at launch origin.
+        var capsuleCol = go.GetComponent<CapsuleCollider>();
+        if (capsuleCol != null) capsuleCol.enabled = false;
+
         var ctrl = go.AddComponent<PlayerController>();
         ctrl.Init(player, isLocal);
 
@@ -143,6 +148,9 @@ public class PlayerManager : MonoBehaviour
                 AddNavMeshAgent(go, ctrl);
             // else OnNavMeshBaked will add the agent once the bake completes
         }
+
+        var healthBar = go.AddComponent<PlayerHealthBar>();
+        healthBar.Init(player, isLocal);
 
         _players[player.Id] = go;
         CombatManager.Instance?.RegisterPlayerPosition(

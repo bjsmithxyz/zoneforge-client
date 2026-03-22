@@ -711,6 +711,8 @@ GameObject:
   - component: {fileID: 964517666}
   - component: {fileID: 964517665}
   - component: {fileID: 964517667}
+  - component: {fileID: 964517669}
+  - component: {fileID: 964517668}
   m_Layer: 0
   m_Name: SpacetimeDBManager
   m_TagString: Untagged
@@ -757,6 +759,30 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 61b356a31be0011b087a178d41a20b31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &964517668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 964517664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5698295597b00bf2d80b8562feb1c5e0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &964517669
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 964517664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e42c712537ec9bbb89013dfca361d0a3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1370989080
