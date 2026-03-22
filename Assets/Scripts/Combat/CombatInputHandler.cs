@@ -44,6 +44,11 @@ public class CombatInputHandler : MonoBehaviour
 
         if (localPlayer.IsDead)
         {
+            // Clear target selection when dead so the ring doesn't persist
+            _selectedTargetId = 0;
+            if (_selectionRing != null)
+                _selectionRing.SetActive(false);
+
             if (Input.GetKeyDown(KeyCode.R))
                 SpacetimeDBManager.Conn.Reducers.Respawn();
             // Suppress all other input while dead
