@@ -69,6 +69,9 @@ public class PlayerManager : MonoBehaviour
         var ctrl = go.GetComponent<PlayerController>();
         if (ctrl == null) { Debug.LogWarning($"[PlayerManager] PlayerController missing on {go.name}"); return; }
         ctrl.ReceiveServerPosition(newPlayer);
+        CombatManager.Instance?.RegisterPlayerPosition(
+            newPlayer.Id,
+            new Vector3(newPlayer.PositionX, 1f, newPlayer.PositionY));
     }
 
     void OnPlayerDeleted(Player player)
@@ -98,6 +101,10 @@ public class PlayerManager : MonoBehaviour
             AddNavMeshAgent(go, ctrl);
         }
     }
+
+    /// <summary>Returns the GameObject for a player id, or null if not spawned.</summary>
+    public GameObject GetPlayerObject(ulong playerId) =>
+        _players.TryGetValue(playerId, out var go) ? go : null;
 
     static void AddNavMeshAgent(GameObject go, PlayerController ctrl)
     {
@@ -134,6 +141,9 @@ public class PlayerManager : MonoBehaviour
         }
 
         _players[player.Id] = go;
+        CombatManager.Instance?.RegisterPlayerPosition(
+            player.Id,
+            new Vector3(player.PositionX, 1f, player.PositionY));
         Debug.Log($"[PlayerManager] Spawned {go.name} at (X={player.PositionX}, Z={player.PositionY})");
     }
 
