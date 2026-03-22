@@ -39,7 +39,7 @@ public class PooledProjectile : MonoBehaviour
             StopCoroutine(_timeoutCoroutine);
             _timeoutCoroutine = null;
         }
-        _rb.linearVelocity = Vector3.zero;
+        _rb.velocity = Vector3.zero;
         _rb.angularVelocity = Vector3.zero;
     }
 
@@ -49,7 +49,7 @@ public class PooledProjectile : MonoBehaviour
         transform.position = origin;
         Vector3 dir = (targetPos - origin).normalized;
         transform.forward = dir;
-        _rb.linearVelocity = dir * speed;
+        _rb.velocity = dir * speed;
     }
 
     void OnCollisionEnter(Collision collision)
