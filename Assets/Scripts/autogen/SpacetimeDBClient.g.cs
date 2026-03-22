@@ -27,8 +27,12 @@ namespace SpacetimeDB.Types
     {
         public RemoteTables(DbConnection conn)
         {
+            AddTable(Ability = new(conn));
+            AddTable(CombatLog = new(conn));
             AddTable(EntityInstance = new(conn));
             AddTable(Player = new(conn));
+            AddTable(PlayerCooldown = new(conn));
+            AddTable(StatusEffect = new(conn));
             AddTable(TerrainChunk = new(conn));
             AddTable(Zone = new(conn));
         }
@@ -527,8 +531,12 @@ namespace SpacetimeDB.Types
 
         internal static string[] AllTablesSqlQueries() => new string[]
         {
+            new QueryBuilder().From.Ability().ToSql(),
+            new QueryBuilder().From.CombatLog().ToSql(),
             new QueryBuilder().From.EntityInstance().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
+            new QueryBuilder().From.PlayerCooldown().ToSql(),
+            new QueryBuilder().From.StatusEffect().ToSql(),
             new QueryBuilder().From.TerrainChunk().ToSql(),
             new QueryBuilder().From.Zone().ToSql(),
         }
@@ -537,8 +545,12 @@ namespace SpacetimeDB.Types
 
     public sealed class From
     {
+        public global::SpacetimeDB.Table<Ability, AbilityCols, AbilityIxCols> Ability() => new("ability", new AbilityCols("ability"), new AbilityIxCols("ability"));
+        public global::SpacetimeDB.Table<CombatLog, CombatLogCols, CombatLogIxCols> CombatLog() => new("combat_log", new CombatLogCols("combat_log"), new CombatLogIxCols("combat_log"));
         public global::SpacetimeDB.Table<EntityInstance, EntityInstanceCols, EntityInstanceIxCols> EntityInstance() => new("entity_instance", new EntityInstanceCols("entity_instance"), new EntityInstanceIxCols("entity_instance"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
+        public global::SpacetimeDB.Table<PlayerCooldown, PlayerCooldownCols, PlayerCooldownIxCols> PlayerCooldown() => new("player_cooldown", new PlayerCooldownCols("player_cooldown"), new PlayerCooldownIxCols("player_cooldown"));
+        public global::SpacetimeDB.Table<StatusEffect, StatusEffectCols, StatusEffectIxCols> StatusEffect() => new("status_effect", new StatusEffectCols("status_effect"), new StatusEffectIxCols("status_effect"));
         public global::SpacetimeDB.Table<TerrainChunk, TerrainChunkCols, TerrainChunkIxCols> TerrainChunk() => new("terrain_chunk", new TerrainChunkCols("terrain_chunk"), new TerrainChunkIxCols("terrain_chunk"));
         public global::SpacetimeDB.Table<Zone, ZoneCols, ZoneIxCols> Zone() => new("zone", new ZoneCols("zone"), new ZoneIxCols("zone"));
     }
@@ -625,8 +637,10 @@ namespace SpacetimeDB.Types
                 Reducer.CreatePlayer args => Reducers.InvokeCreatePlayer(eventContext, args),
                 Reducer.CreateZone args => Reducers.InvokeCreateZone(eventContext, args),
                 Reducer.MovePlayer args => Reducers.InvokeMovePlayer(eventContext, args),
+                Reducer.Respawn args => Reducers.InvokeRespawn(eventContext, args),
                 Reducer.SpawnEntity args => Reducers.InvokeSpawnEntity(eventContext, args),
                 Reducer.UpdateTerrainChunk args => Reducers.InvokeUpdateTerrainChunk(eventContext, args),
+                Reducer.UseAbility args => Reducers.InvokeUseAbility(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
             };
         }

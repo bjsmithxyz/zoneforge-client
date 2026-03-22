@@ -29,6 +29,12 @@ namespace SpacetimeDB.Types
         public int Health;
         [DataMember(Name = "max_health")]
         public int MaxHealth;
+        [DataMember(Name = "mana")]
+        public int Mana;
+        [DataMember(Name = "max_mana")]
+        public int MaxMana;
+        [DataMember(Name = "is_dead")]
+        public bool IsDead;
 
         public Player(
             ulong Id,
@@ -38,7 +44,10 @@ namespace SpacetimeDB.Types
             float PositionX,
             float PositionY,
             int Health,
-            int MaxHealth
+            int MaxHealth,
+            int Mana,
+            int MaxMana,
+            bool IsDead
         )
         {
             this.Id = Id;
@@ -49,6 +58,9 @@ namespace SpacetimeDB.Types
             this.PositionY = PositionY;
             this.Health = Health;
             this.MaxHealth = MaxHealth;
+            this.Mana = Mana;
+            this.MaxMana = MaxMana;
+            this.IsDead = IsDead;
         }
 
         public Player()

@@ -57,6 +57,9 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Col<Player, float> PositionY { get; }
         public global::SpacetimeDB.Col<Player, int> Health { get; }
         public global::SpacetimeDB.Col<Player, int> MaxHealth { get; }
+        public global::SpacetimeDB.Col<Player, int> Mana { get; }
+        public global::SpacetimeDB.Col<Player, int> MaxMana { get; }
+        public global::SpacetimeDB.Col<Player, bool> IsDead { get; }
 
         public PlayerCols(string tableName)
         {
@@ -68,6 +71,9 @@ namespace SpacetimeDB.Types
             PositionY = new global::SpacetimeDB.Col<Player, float>(tableName, "position_y");
             Health = new global::SpacetimeDB.Col<Player, int>(tableName, "health");
             MaxHealth = new global::SpacetimeDB.Col<Player, int>(tableName, "max_health");
+            Mana = new global::SpacetimeDB.Col<Player, int>(tableName, "mana");
+            MaxMana = new global::SpacetimeDB.Col<Player, int>(tableName, "max_mana");
+            IsDead = new global::SpacetimeDB.Col<Player, bool>(tableName, "is_dead");
         }
     }
 
