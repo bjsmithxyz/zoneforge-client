@@ -19,6 +19,12 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<Player, Player> OnPlayerUpdated;
     public static event Action<Player> OnPlayerDeleted;
     public static event Action<TerrainChunk> OnTerrainChunkUpdated;
+    public static event Action<CombatLog> OnCombatLogInserted;
+    public static event Action<Ability> OnAbilityInserted;
+    public static event Action<PlayerCooldown> OnPlayerCooldownInserted;
+    public static event Action<PlayerCooldown, PlayerCooldown> OnPlayerCooldownUpdated;
+    public static event Action<StatusEffect> OnStatusEffectInserted;
+    public static event Action<StatusEffect> OnStatusEffectDeleted;
 
     [SerializeField] private string serverUri = "http://localhost:3000";
     [SerializeField] private string databaseName = "zoneforge-server";
@@ -34,7 +40,7 @@ public class SpacetimeDBManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    private const string TokenPrefKey = "spacetimedb_token";
+    private static string TokenPrefKey => Application.isEditor ? "spacetimedb_token_editor" : "spacetimedb_token";
 
     void Start()
     {
@@ -68,7 +74,11 @@ public class SpacetimeDBManager : MonoBehaviour
                 "SELECT * FROM player",
                 "SELECT * FROM zone",
                 "SELECT * FROM entity_instance",
-                "SELECT * FROM terrain_chunk"
+                "SELECT * FROM terrain_chunk",
+                "SELECT * FROM ability",
+                "SELECT * FROM player_cooldown",
+                "SELECT * FROM status_effect",
+                "SELECT * FROM combat_log"
             });
     }
 
@@ -88,6 +98,13 @@ public class SpacetimeDBManager : MonoBehaviour
 
         Conn.Db.TerrainChunk.OnInsert += (eventCtx, chunk) => OnTerrainChunkUpdated?.Invoke(chunk);
         Conn.Db.TerrainChunk.OnUpdate += (eventCtx, _oldChunk, newChunk) => OnTerrainChunkUpdated?.Invoke(newChunk);
+
+        Conn.Db.CombatLog.OnInsert += (eventCtx, log) => OnCombatLogInserted?.Invoke(log);
+        Conn.Db.Ability.OnInsert += (eventCtx, ability) => OnAbilityInserted?.Invoke(ability);
+        Conn.Db.PlayerCooldown.OnInsert += (eventCtx, cd) => OnPlayerCooldownInserted?.Invoke(cd);
+        Conn.Db.PlayerCooldown.OnUpdate += (eventCtx, oldCd, newCd) => OnPlayerCooldownUpdated?.Invoke(oldCd, newCd);
+        Conn.Db.StatusEffect.OnInsert += (eventCtx, effect) => OnStatusEffectInserted?.Invoke(effect);
+        Conn.Db.StatusEffect.OnDelete += (eventCtx, effect) => OnStatusEffectDeleted?.Invoke(effect);
 
         IsSubscribed = true;
         OnConnected?.Invoke();
