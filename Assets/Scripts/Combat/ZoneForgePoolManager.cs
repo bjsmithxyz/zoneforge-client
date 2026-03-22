@@ -76,6 +76,35 @@ public class ZoneForgePoolManager : MonoBehaviour
         return go;
     }
 
+    /// <summary>Retrieve an object from the pool, positioned before activation to avoid a one-frame wrong-position flash.</summary>
+    public GameObject Get(string key, Vector3 position)
+    {
+        if (!_pools.TryGetValue(key, out var queue))
+        {
+            Debug.LogWarning($"[PoolManager] Unknown pool key: '{key}'");
+            return null;
+        }
+
+        GameObject go;
+        if (queue.Count > 0)
+        {
+            go = queue.Dequeue();
+        }
+        else
+        {
+            if (!_defs.TryGetValue(key, out var def) || CountActive(key) >= def.maxSize)
+            {
+                Debug.LogWarning($"[PoolManager] Pool '{key}' exhausted and at max size");
+                return null;
+            }
+            go = CreatePooled(key, def);
+        }
+
+        go.transform.position = position;
+        go.SetActive(true);
+        return go;
+    }
+
     /// <summary>Return an object to the pool.</summary>
     public void Return(string key, GameObject go)
     {

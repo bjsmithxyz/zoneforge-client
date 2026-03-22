@@ -68,13 +68,9 @@ public class PooledProjectile : MonoBehaviour
         if (_hasReturned) return;
         _hasReturned = true;
 
-        // Spawn impact VFX
+        // Spawn impact VFX — positioned overload avoids one-frame wrong-position flash
         if (!string.IsNullOrEmpty(impactVfxKey) && ZoneForgePoolManager.Instance != null)
-        {
-            var vfx = ZoneForgePoolManager.Instance.Get(impactVfxKey);
-            if (vfx != null)
-                vfx.transform.position = impactPoint;
-        }
+            ZoneForgePoolManager.Instance.Get(impactVfxKey, impactPoint);
 
         if (ZoneForgePoolManager.Instance != null)
             ZoneForgePoolManager.Instance.Return(poolKey, gameObject);
