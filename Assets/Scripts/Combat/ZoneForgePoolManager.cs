@@ -43,7 +43,6 @@ public class ZoneForgePoolManager : MonoBehaviour
             for (int i = 0; i < def.initialCapacity; i++)
                 queue.Enqueue(CreatePooled(def.key, def));
             _pools[def.key] = queue;
-            _totalCreated[def.key] = def.initialCapacity;
             Debug.Log($"[PoolManager] Pre-allocated {def.initialCapacity}x '{def.key}'");
         }
     }
