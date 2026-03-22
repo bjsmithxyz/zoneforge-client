@@ -128,6 +128,10 @@ public class PlayerManager : MonoBehaviour
 
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         go.name = isLocal ? "LocalPlayer" : $"RemotePlayer_{player.Id}";
+        var rend = go.GetComponent<Renderer>();
+        var mat = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        mat.color = isLocal ? Color.cyan : Color.red;
+        rend.material = mat;
 
         var ctrl = go.AddComponent<PlayerController>();
         ctrl.Init(player, isLocal);

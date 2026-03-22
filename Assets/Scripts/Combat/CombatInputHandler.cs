@@ -29,6 +29,7 @@ public class CombatInputHandler : MonoBehaviour
         _selectionRing.name = "SelectionRing";
         _selectionRing.transform.localScale = new Vector3(1.2f, 0.05f, 1.2f);
         var rend = _selectionRing.GetComponent<Renderer>();
+        rend.material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
         rend.material.color = Color.yellow;
         // Disable collider so the ring doesn't interfere with physics
         Destroy(_selectionRing.GetComponent<Collider>());
