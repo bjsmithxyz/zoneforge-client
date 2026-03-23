@@ -5,9 +5,9 @@ using SpacetimeDB.Types;
 
 /// <summary>
 /// Handles combat input:
-///   Tab       — cycle target through other living players
-///   1         — Auto-Attack selected target
-///   2         — Fireball selected target
+///   Tab       — cycle target through other living players and enemies
+///   1         — Auto-Attack selected target (player → UseAbility, enemy → AttackEnemy)
+///   2         — Fireball selected target (player → UseAbility, enemy → AttackEnemy)
 ///   3         — Heal self
 ///   R         — Respawn (only when dead)
 /// Attach to any persistent GameObject (e.g. the SpacetimeDBManager GO).
@@ -20,6 +20,7 @@ public class CombatInputHandler : MonoBehaviour
     private const ulong AbilityHeal       = 3;
 
     private ulong _selectedTargetId;   // 0 = no target
+    private bool _targetIsEnemy;       // false = player target, true = enemy target
     private GameObject _selectionRing; // flat cylinder under the target
 
     void Start()
@@ -47,6 +48,7 @@ public class CombatInputHandler : MonoBehaviour
         {
             // Clear target selection when dead so the ring doesn't persist
             _selectedTargetId = 0;
+            _targetIsEnemy    = false;
             if (_selectionRing != null)
                 _selectionRing.SetActive(false);
 
@@ -74,56 +76,73 @@ public class CombatInputHandler : MonoBehaviour
 
     private void CycleTarget()
     {
-        var candidates = new List<Player>();
+        // Build a unified candidate list: (id, isEnemy, position for ring)
+        var candidates = new System.Collections.Generic.List<(ulong id, bool isEnemy)>();
+
         foreach (var p in SpacetimeDBManager.Conn.Db.Player.Iter())
         {
             if (p.Identity == SpacetimeDBManager.LocalIdentity) continue;
             if (p.IsDead) continue;
-            candidates.Add(p);
+            candidates.Add((p.Id, false));
+        }
+
+        foreach (var e in SpacetimeDBManager.Conn.Db.Enemy.Iter())
+        {
+            if (e.IsDead) continue;
+            candidates.Add((e.Id, true));
         }
 
         if (candidates.Count == 0)
         {
             _selectedTargetId = 0;
+            _targetIsEnemy    = false;
             _selectionRing.SetActive(false);
             return;
         }
 
-        // Find the index of the current target in the list; advance by 1
-        int currentIndex = candidates.FindIndex(p => p.Id == _selectedTargetId);
-        int nextIndex = (currentIndex + 1) % candidates.Count;
-        _selectedTargetId = candidates[nextIndex].Id;
+        // Find current target index in unified list; advance by 1
+        int currentIndex = candidates.FindIndex(c => c.id == _selectedTargetId && c.isEnemy == _targetIsEnemy);
+        int nextIndex    = (currentIndex + 1) % candidates.Count;
+
+        _selectedTargetId = candidates[nextIndex].id;
+        _targetIsEnemy    = candidates[nextIndex].isEnemy;
         _selectionRing.SetActive(true);
-        Debug.Log($"[CombatInput] Target selected: player {_selectedTargetId}");
+
+        Debug.Log($"[CombatInput] Target: {(_targetIsEnemy ? "enemy" : "player")} id={_selectedTargetId}");
     }
 
     private void TryUseAbility(ulong abilityId, bool requireTarget, Player localPlayer)
     {
-        ulong targetId;
-        if (requireTarget)
+        if (requireTarget && _selectedTargetId == 0)
         {
-            if (_selectedTargetId == 0)
-            {
-                Debug.Log("[CombatInput] No target selected");
-                return;
-            }
-            targetId = _selectedTargetId;
-        }
-        else
-        {
-            // Self-cast — use local player's id
-            targetId = localPlayer.Id;
+            Debug.Log("[CombatInput] No target selected");
+            return;
         }
 
-        // Client-side cooldown check (server also validates, this prevents spamming)
         if (IsOnCooldown(abilityId, localPlayer.Id))
         {
             Debug.Log($"[CombatInput] Ability {abilityId} on cooldown");
             return;
         }
 
-        SpacetimeDBManager.Conn.Reducers.UseAbility(abilityId, targetId);
-        Debug.Log($"[CombatInput] UseAbility({abilityId}, target={targetId})");
+        if (!requireTarget)
+        {
+            // Self-cast (Heal) — always targets local player
+            SpacetimeDBManager.Conn.Reducers.UseAbility(abilityId, localPlayer.Id);
+            Debug.Log($"[CombatInput] UseAbility({abilityId}, self)");
+            return;
+        }
+
+        if (_targetIsEnemy)
+        {
+            SpacetimeDBManager.Conn.Reducers.AttackEnemy(abilityId, _selectedTargetId);
+            Debug.Log($"[CombatInput] AttackEnemy({abilityId}, enemy={_selectedTargetId})");
+        }
+        else
+        {
+            SpacetimeDBManager.Conn.Reducers.UseAbility(abilityId, _selectedTargetId);
+            Debug.Log($"[CombatInput] UseAbility({abilityId}, player={_selectedTargetId})");
+        }
     }
 
     private bool IsOnCooldown(ulong abilityId, ulong playerId)
@@ -144,12 +163,14 @@ public class CombatInputHandler : MonoBehaviour
     {
         if (_selectedTargetId == 0) { _selectionRing.SetActive(false); return; }
 
-        // Find target GO via PlayerManager
-        if (PlayerManager.Instance == null) return;
-        var targetGo = PlayerManager.Instance.GetPlayerObject(_selectedTargetId);
+        GameObject targetGo = _targetIsEnemy
+            ? EnemyManager.Instance?.GetEnemyObject(_selectedTargetId)
+            : PlayerManager.Instance?.GetPlayerObject(_selectedTargetId);
+
         if (targetGo == null)
         {
             _selectedTargetId = 0;
+            _targetIsEnemy    = false;
             _selectionRing.SetActive(false);
             return;
         }
