@@ -18,6 +18,10 @@ public class CombatManager : MonoBehaviour
     // Key: player id, Value: world position
     private readonly Dictionary<ulong, Vector3> _playerPositions = new();
 
+    // Cache of enemy world positions — updated by EnemyManager via RegisterEnemyPosition
+    // Key: enemy id, Value: world position
+    private readonly Dictionary<ulong, Vector3> _enemyPositions = new();
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -45,6 +49,12 @@ public class CombatManager : MonoBehaviour
         _playerPositions[playerId] = worldPos;
     }
 
+    /// <summary>Called by EnemyManager after spawning or moving an enemy capsule.</summary>
+    public void RegisterEnemyPosition(ulong enemyId, Vector3 worldPos)
+    {
+        _enemyPositions[enemyId] = worldPos;
+    }
+
     private void OnCombatLogInserted(CombatLog log)
     {
         if (SpacetimeDBManager.Conn == null) return;
@@ -59,11 +69,31 @@ public class CombatManager : MonoBehaviour
             }
         }
 
-        // Determine positions
-        if (!_playerPositions.TryGetValue(log.AttackerId, out var attackerPos))
-            Debug.LogWarning($"[CombatManager] No position for attacker {log.AttackerId}");
-        if (!_playerPositions.TryGetValue(log.TargetId, out var targetPos))
-            Debug.LogWarning($"[CombatManager] No position for target {log.TargetId}");
+        // Determine attacker position
+        Vector3 attackerPos = default;
+        if (log.AttackerIsEnemy)
+        {
+            if (!_enemyPositions.TryGetValue(log.AttackerId, out attackerPos))
+                Debug.LogWarning($"[CombatManager] No position for enemy attacker {log.AttackerId}");
+        }
+        else
+        {
+            if (!_playerPositions.TryGetValue(log.AttackerId, out attackerPos))
+                Debug.LogWarning($"[CombatManager] No position for player attacker {log.AttackerId}");
+        }
+
+        // Determine target position
+        Vector3 targetPos = default;
+        if (log.TargetIsEnemy)
+        {
+            if (!_enemyPositions.TryGetValue(log.TargetId, out targetPos))
+                Debug.LogWarning($"[CombatManager] No position for enemy target {log.TargetId}");
+        }
+        else
+        {
+            if (!_playerPositions.TryGetValue(log.TargetId, out targetPos))
+                Debug.LogWarning($"[CombatManager] No position for player target {log.TargetId}");
+        }
 
         if (ability != null && ability.AbilityType == AbilityType.Projectile)
         {
