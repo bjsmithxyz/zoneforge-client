@@ -28,10 +28,14 @@ namespace SpacetimeDB.Types
         public RemoteTables(DbConnection conn)
         {
             AddTable(Ability = new(conn));
+            AddTable(Admin = new(conn));
             AddTable(CombatLog = new(conn));
+            AddTable(Enemy = new(conn));
+            AddTable(EnemyDef = new(conn));
             AddTable(EntityInstance = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerCooldown = new(conn));
+            AddTable(SpawnPoint = new(conn));
             AddTable(StatusEffect = new(conn));
             AddTable(TerrainChunk = new(conn));
             AddTable(Zone = new(conn));
@@ -532,10 +536,14 @@ namespace SpacetimeDB.Types
         internal static string[] AllTablesSqlQueries() => new string[]
         {
             new QueryBuilder().From.Ability().ToSql(),
+            new QueryBuilder().From.Admin().ToSql(),
             new QueryBuilder().From.CombatLog().ToSql(),
+            new QueryBuilder().From.Enemy().ToSql(),
+            new QueryBuilder().From.EnemyDef().ToSql(),
             new QueryBuilder().From.EntityInstance().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerCooldown().ToSql(),
+            new QueryBuilder().From.SpawnPoint().ToSql(),
             new QueryBuilder().From.StatusEffect().ToSql(),
             new QueryBuilder().From.TerrainChunk().ToSql(),
             new QueryBuilder().From.Zone().ToSql(),
@@ -546,10 +554,14 @@ namespace SpacetimeDB.Types
     public sealed class From
     {
         public global::SpacetimeDB.Table<Ability, AbilityCols, AbilityIxCols> Ability() => new("ability", new AbilityCols("ability"), new AbilityIxCols("ability"));
+        public global::SpacetimeDB.Table<Admin, AdminCols, AdminIxCols> Admin() => new("admin", new AdminCols("admin"), new AdminIxCols("admin"));
         public global::SpacetimeDB.Table<CombatLog, CombatLogCols, CombatLogIxCols> CombatLog() => new("combat_log", new CombatLogCols("combat_log"), new CombatLogIxCols("combat_log"));
+        public global::SpacetimeDB.Table<Enemy, EnemyCols, EnemyIxCols> Enemy() => new("enemy", new EnemyCols("enemy"), new EnemyIxCols("enemy"));
+        public global::SpacetimeDB.Table<EnemyDefinition, EnemyDefCols, EnemyDefIxCols> EnemyDef() => new("enemy_def", new EnemyDefCols("enemy_def"), new EnemyDefIxCols("enemy_def"));
         public global::SpacetimeDB.Table<EntityInstance, EntityInstanceCols, EntityInstanceIxCols> EntityInstance() => new("entity_instance", new EntityInstanceCols("entity_instance"), new EntityInstanceIxCols("entity_instance"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerCooldown, PlayerCooldownCols, PlayerCooldownIxCols> PlayerCooldown() => new("player_cooldown", new PlayerCooldownCols("player_cooldown"), new PlayerCooldownIxCols("player_cooldown"));
+        public global::SpacetimeDB.Table<SpawnPoint, SpawnPointCols, SpawnPointIxCols> SpawnPoint() => new("spawn_point", new SpawnPointCols("spawn_point"), new SpawnPointIxCols("spawn_point"));
         public global::SpacetimeDB.Table<StatusEffect, StatusEffectCols, StatusEffectIxCols> StatusEffect() => new("status_effect", new StatusEffectCols("status_effect"), new StatusEffectIxCols("status_effect"));
         public global::SpacetimeDB.Table<TerrainChunk, TerrainChunkCols, TerrainChunkIxCols> TerrainChunk() => new("terrain_chunk", new TerrainChunkCols("terrain_chunk"), new TerrainChunkIxCols("terrain_chunk"));
         public global::SpacetimeDB.Table<Zone, ZoneCols, ZoneIxCols> Zone() => new("zone", new ZoneCols("zone"), new ZoneIxCols("zone"));
@@ -634,10 +646,17 @@ namespace SpacetimeDB.Types
             var eventContext = (ReducerEventContext)context;
             return reducer switch
             {
+                Reducer.AttackEnemy args => Reducers.InvokeAttackEnemy(eventContext, args),
+                Reducer.CreateEnemyDef args => Reducers.InvokeCreateEnemyDef(eventContext, args),
                 Reducer.CreatePlayer args => Reducers.InvokeCreatePlayer(eventContext, args),
+                Reducer.CreateSpawnPoint args => Reducers.InvokeCreateSpawnPoint(eventContext, args),
                 Reducer.CreateZone args => Reducers.InvokeCreateZone(eventContext, args),
+                Reducer.DeleteEnemyDef args => Reducers.InvokeDeleteEnemyDef(eventContext, args),
+                Reducer.DeleteSpawnPoint args => Reducers.InvokeDeleteSpawnPoint(eventContext, args),
+                Reducer.DespawnEnemy args => Reducers.InvokeDespawnEnemy(eventContext, args),
                 Reducer.MovePlayer args => Reducers.InvokeMovePlayer(eventContext, args),
                 Reducer.Respawn args => Reducers.InvokeRespawn(eventContext, args),
+                Reducer.SpawnEnemyManual args => Reducers.InvokeSpawnEnemyManual(eventContext, args),
                 Reducer.SpawnEntity args => Reducers.InvokeSpawnEntity(eventContext, args),
                 Reducer.UpdateTerrainChunk args => Reducers.InvokeUpdateTerrainChunk(eventContext, args),
                 Reducer.UseAbility args => Reducers.InvokeUseAbility(eventContext, args),
