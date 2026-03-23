@@ -25,6 +25,9 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<PlayerCooldown, PlayerCooldown> OnPlayerCooldownUpdated;
     public static event Action<StatusEffect> OnStatusEffectInserted;
     public static event Action<StatusEffect> OnStatusEffectDeleted;
+    public static event Action<Enemy> OnEnemyInserted;
+    public static event Action<Enemy, Enemy> OnEnemyUpdated;
+    public static event Action<Enemy> OnEnemyDeleted;
 
     [SerializeField] private string serverUri = "http://localhost:3000";
     [SerializeField] private string databaseName = "zoneforge-server";
@@ -78,7 +81,9 @@ public class SpacetimeDBManager : MonoBehaviour
                 "SELECT * FROM ability",
                 "SELECT * FROM player_cooldown",
                 "SELECT * FROM status_effect",
-                "SELECT * FROM combat_log"
+                "SELECT * FROM combat_log",
+                "SELECT * FROM enemy",
+                "SELECT * FROM enemy_def",
             });
     }
 
@@ -105,6 +110,9 @@ public class SpacetimeDBManager : MonoBehaviour
         Conn.Db.PlayerCooldown.OnUpdate += (eventCtx, oldCd, newCd) => OnPlayerCooldownUpdated?.Invoke(oldCd, newCd);
         Conn.Db.StatusEffect.OnInsert += (eventCtx, effect) => OnStatusEffectInserted?.Invoke(effect);
         Conn.Db.StatusEffect.OnDelete += (eventCtx, effect) => OnStatusEffectDeleted?.Invoke(effect);
+        Conn.Db.Enemy.OnInsert += (eventCtx, enemy) => OnEnemyInserted?.Invoke(enemy);
+        Conn.Db.Enemy.OnUpdate += (eventCtx, oldEnemy, newEnemy) => OnEnemyUpdated?.Invoke(oldEnemy, newEnemy);
+        Conn.Db.Enemy.OnDelete += (eventCtx, enemy) => OnEnemyDeleted?.Invoke(enemy);
 
         IsSubscribed = true;
         OnConnected?.Invoke();
