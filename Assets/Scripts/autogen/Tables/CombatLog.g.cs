@@ -46,8 +46,6 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Col<CombatLog, ulong> AbilityId { get; }
         public global::SpacetimeDB.Col<CombatLog, int> DamageDealt { get; }
         public global::SpacetimeDB.Col<CombatLog, int> Overkill { get; }
-        public global::SpacetimeDB.Col<CombatLog, bool> AttackerIsEnemy { get; }
-        public global::SpacetimeDB.Col<CombatLog, bool> TargetIsEnemy { get; }
 
         public CombatLogCols(string tableName)
         {
@@ -58,8 +56,6 @@ namespace SpacetimeDB.Types
             AbilityId = new global::SpacetimeDB.Col<CombatLog, ulong>(tableName, "ability_id");
             DamageDealt = new global::SpacetimeDB.Col<CombatLog, int>(tableName, "damage_dealt");
             Overkill = new global::SpacetimeDB.Col<CombatLog, int>(tableName, "overkill");
-            AttackerIsEnemy = new global::SpacetimeDB.Col<CombatLog, bool>(tableName, "attacker_is_enemy");
-            TargetIsEnemy = new global::SpacetimeDB.Col<CombatLog, bool>(tableName, "target_is_enemy");
         }
     }
 

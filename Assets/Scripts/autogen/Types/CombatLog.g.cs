@@ -27,10 +27,6 @@ namespace SpacetimeDB.Types
         public int DamageDealt;
         [DataMember(Name = "overkill")]
         public int Overkill;
-        [DataMember(Name = "attacker_is_enemy")]
-        public bool AttackerIsEnemy;
-        [DataMember(Name = "target_is_enemy")]
-        public bool TargetIsEnemy;
 
         public CombatLog(
             ulong Id,
@@ -39,9 +35,7 @@ namespace SpacetimeDB.Types
             ulong TargetId,
             ulong AbilityId,
             int DamageDealt,
-            int Overkill,
-            bool AttackerIsEnemy,
-            bool TargetIsEnemy
+            int Overkill
         )
         {
             this.Id = Id;
@@ -51,8 +45,6 @@ namespace SpacetimeDB.Types
             this.AbilityId = AbilityId;
             this.DamageDealt = DamageDealt;
             this.Overkill = Overkill;
-            this.AttackerIsEnemy = AttackerIsEnemy;
-            this.TargetIsEnemy = TargetIsEnemy;
         }
 
         public CombatLog()

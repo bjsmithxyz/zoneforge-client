@@ -11,27 +11,27 @@ namespace SpacetimeDB.Types
 {
     [SpacetimeDB.Type]
     [DataContract]
-    public sealed partial class RespawnTimer
+    public sealed partial class EnemyRespawnTick
     {
         [DataMember(Name = "scheduled_id")]
         public ulong ScheduledId;
         [DataMember(Name = "scheduled_at")]
         public SpacetimeDB.ScheduleAt ScheduledAt;
-        [DataMember(Name = "spawn_point_id")]
-        public ulong SpawnPointId;
+        [DataMember(Name = "enemy_id")]
+        public ulong EnemyId;
 
-        public RespawnTimer(
+        public EnemyRespawnTick(
             ulong ScheduledId,
             SpacetimeDB.ScheduleAt ScheduledAt,
-            ulong SpawnPointId
+            ulong EnemyId
         )
         {
             this.ScheduledId = ScheduledId;
             this.ScheduledAt = ScheduledAt;
-            this.SpawnPointId = SpawnPointId;
+            this.EnemyId = EnemyId;
         }
 
-        public RespawnTimer()
+        public EnemyRespawnTick()
         {
             this.ScheduledAt = null!;
         }

@@ -12,12 +12,12 @@ namespace SpacetimeDB.Types
 {
     public sealed partial class RemoteReducers : RemoteBase
     {
-        public delegate void DeleteSpawnPointHandler(ReducerEventContext ctx, ulong spId);
+        public delegate void DeleteSpawnPointHandler(ReducerEventContext ctx, ulong spawnPointId);
         public event DeleteSpawnPointHandler? OnDeleteSpawnPoint;
 
-        public void DeleteSpawnPoint(ulong spId)
+        public void DeleteSpawnPoint(ulong spawnPointId)
         {
-            conn.InternalCallReducer(new Reducer.DeleteSpawnPoint(spId));
+            conn.InternalCallReducer(new Reducer.DeleteSpawnPoint(spawnPointId));
         }
 
         public bool InvokeDeleteSpawnPoint(ReducerEventContext ctx, Reducer.DeleteSpawnPoint args)
@@ -36,7 +36,7 @@ namespace SpacetimeDB.Types
             }
             OnDeleteSpawnPoint(
                 ctx,
-                args.SpId
+                args.SpawnPointId
             );
             return true;
         }
@@ -48,12 +48,12 @@ namespace SpacetimeDB.Types
         [DataContract]
         public sealed partial class DeleteSpawnPoint : Reducer, IReducerArgs
         {
-            [DataMember(Name = "sp_id")]
-            public ulong SpId;
+            [DataMember(Name = "spawn_point_id")]
+            public ulong SpawnPointId;
 
-            public DeleteSpawnPoint(ulong SpId)
+            public DeleteSpawnPoint(ulong SpawnPointId)
             {
-                this.SpId = SpId;
+                this.SpawnPointId = SpawnPointId;
             }
 
             public DeleteSpawnPoint()
