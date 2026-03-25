@@ -26,6 +26,7 @@ public class PlayerManager : MonoBehaviour
         SpacetimeDBManager.OnPlayerUpdated  += OnPlayerUpdated;
         SpacetimeDBManager.OnPlayerDeleted  += OnPlayerDeleted;
         SpacetimeDBManager.OnConnected      += OnConnected;
+        SpacetimeDBManager.OnZoneChanged    += OnZoneChanged;
         NavMeshManager.OnNavMeshReady       += OnNavMeshBaked;
     }
 
@@ -35,6 +36,7 @@ public class PlayerManager : MonoBehaviour
         SpacetimeDBManager.OnPlayerUpdated  -= OnPlayerUpdated;
         SpacetimeDBManager.OnPlayerDeleted  -= OnPlayerDeleted;
         SpacetimeDBManager.OnConnected      -= OnConnected;
+        SpacetimeDBManager.OnZoneChanged    -= OnZoneChanged;
         NavMeshManager.OnNavMeshReady       -= OnNavMeshBaked;
     }
 
@@ -45,7 +47,9 @@ public class PlayerManager : MonoBehaviour
         bool hasLocalPlayer = false;
         foreach (var player in SpacetimeDBManager.Conn.Db.Player.Iter())
         {
-            if (!_players.ContainsKey(player.Id))
+            bool inCurrentZone = player.Identity == SpacetimeDBManager.LocalIdentity
+                || player.ZoneId == SpacetimeDBManager.CurrentZoneId;
+            if (!_players.ContainsKey(player.Id) && inCurrentZone)
                 SpawnPlayer(player);
             if (player.Identity == SpacetimeDBManager.LocalIdentity)
                 hasLocalPlayer = true;
@@ -57,17 +61,69 @@ public class PlayerManager : MonoBehaviour
         }
     }
 
+    void OnZoneChanged(ulong oldZoneId)
+    {
+        // Destroy remote player capsules that belonged to the old zone
+        var toRemove = new List<ulong>();
+        foreach (var kvp in _players)
+        {
+            var player = SpacetimeDBManager.Conn.Db.Player.Id.Find(kvp.Key);
+            if (player == null) continue;
+            if (player.Identity == SpacetimeDBManager.LocalIdentity) continue; // never destroy local
+            if (player.ZoneId != SpacetimeDBManager.CurrentZoneId)
+            {
+                Destroy(kvp.Value);
+                toRemove.Add(kvp.Key);
+            }
+        }
+        foreach (var id in toRemove) _players.Remove(id);
+
+        // Backfill: spawn remote players now in the new zone (pre-loaded rows)
+        foreach (var player in SpacetimeDBManager.Conn.Db.Player.Iter())
+        {
+            if (player.Identity == SpacetimeDBManager.LocalIdentity) continue;
+            if (player.ZoneId != SpacetimeDBManager.CurrentZoneId) continue;
+            if (!_players.ContainsKey(player.Id))
+                SpawnPlayer(player);
+        }
+    }
+
     void OnPlayerInserted(Player player)
     {
         if (_players.ContainsKey(player.Id)) return; // guard against backfill duplicate
+        // Zone-gate: only spawn remote players in the current zone
+        if (player.Identity != SpacetimeDBManager.LocalIdentity
+            && player.ZoneId != SpacetimeDBManager.CurrentZoneId) return;
         SpawnPlayer(player);
     }
 
     void OnPlayerUpdated(Player oldPlayer, Player newPlayer)
     {
-        if (!_players.TryGetValue(newPlayer.Id, out var go)) return;
-        var ctrl = go.GetComponent<PlayerController>();
-        if (ctrl == null) { Debug.LogWarning($"[PlayerManager] PlayerController missing on {go.name}"); return; }
+        bool isLocal = newPlayer.Identity == SpacetimeDBManager.LocalIdentity;
+
+        // Remote player moved to a different zone — destroy their capsule
+        if (!isLocal && newPlayer.ZoneId != SpacetimeDBManager.CurrentZoneId)
+        {
+            if (_players.TryGetValue(newPlayer.Id, out var go))
+            {
+                Destroy(go);
+                _players.Remove(newPlayer.Id);
+            }
+            return;
+        }
+
+        // Remote player arrived in this zone — spawn their capsule
+        if (!isLocal && newPlayer.ZoneId == SpacetimeDBManager.CurrentZoneId
+            && !_players.ContainsKey(newPlayer.Id))
+        {
+            SpawnPlayer(newPlayer);
+            return;
+        }
+
+        // Normal update (position, health, etc.)
+        if (!_players.TryGetValue(newPlayer.Id, out var playerGo)) return;
+        var ctrl = playerGo.GetComponent<PlayerController>();
+        if (ctrl == null) { Debug.LogWarning($"[PlayerManager] PlayerController missing on {playerGo.name}"); return; }
         ctrl.ReceiveServerPosition(newPlayer);
         CombatManager.Instance?.RegisterPlayerPosition(
             newPlayer.Id,
