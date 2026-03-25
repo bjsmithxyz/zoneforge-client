@@ -35,6 +35,7 @@ namespace SpacetimeDB.Types
             AddTable(EntityInstance = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerCooldown = new(conn));
+            AddTable(Portal = new(conn));
             AddTable(SpawnPoint = new(conn));
             AddTable(StatusEffect = new(conn));
             AddTable(TerrainChunk = new(conn));
@@ -543,6 +544,7 @@ namespace SpacetimeDB.Types
             new QueryBuilder().From.EntityInstance().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerCooldown().ToSql(),
+            new QueryBuilder().From.Portal().ToSql(),
             new QueryBuilder().From.SpawnPoint().ToSql(),
             new QueryBuilder().From.StatusEffect().ToSql(),
             new QueryBuilder().From.TerrainChunk().ToSql(),
@@ -561,6 +563,7 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Table<EntityInstance, EntityInstanceCols, EntityInstanceIxCols> EntityInstance() => new("entity_instance", new EntityInstanceCols("entity_instance"), new EntityInstanceIxCols("entity_instance"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerCooldown, PlayerCooldownCols, PlayerCooldownIxCols> PlayerCooldown() => new("player_cooldown", new PlayerCooldownCols("player_cooldown"), new PlayerCooldownIxCols("player_cooldown"));
+        public global::SpacetimeDB.Table<Portal, PortalCols, PortalIxCols> Portal() => new("portal", new PortalCols("portal"), new PortalIxCols("portal"));
         public global::SpacetimeDB.Table<SpawnPoint, SpawnPointCols, SpawnPointIxCols> SpawnPoint() => new("spawn_point", new SpawnPointCols("spawn_point"), new SpawnPointIxCols("spawn_point"));
         public global::SpacetimeDB.Table<StatusEffect, StatusEffectCols, StatusEffectIxCols> StatusEffect() => new("status_effect", new StatusEffectCols("status_effect"), new StatusEffectIxCols("status_effect"));
         public global::SpacetimeDB.Table<TerrainChunk, TerrainChunkCols, TerrainChunkIxCols> TerrainChunk() => new("terrain_chunk", new TerrainChunkCols("terrain_chunk"), new TerrainChunkIxCols("terrain_chunk"));
@@ -649,11 +652,14 @@ namespace SpacetimeDB.Types
                 Reducer.AttackEnemy args => Reducers.InvokeAttackEnemy(eventContext, args),
                 Reducer.CreateEnemyDef args => Reducers.InvokeCreateEnemyDef(eventContext, args),
                 Reducer.CreatePlayer args => Reducers.InvokeCreatePlayer(eventContext, args),
+                Reducer.CreatePortal args => Reducers.InvokeCreatePortal(eventContext, args),
                 Reducer.CreateSpawnPoint args => Reducers.InvokeCreateSpawnPoint(eventContext, args),
                 Reducer.CreateZone args => Reducers.InvokeCreateZone(eventContext, args),
                 Reducer.DeleteEnemyDef args => Reducers.InvokeDeleteEnemyDef(eventContext, args),
+                Reducer.DeletePortal args => Reducers.InvokeDeletePortal(eventContext, args),
                 Reducer.DeleteSpawnPoint args => Reducers.InvokeDeleteSpawnPoint(eventContext, args),
                 Reducer.DespawnEnemy args => Reducers.InvokeDespawnEnemy(eventContext, args),
+                Reducer.EnterZone args => Reducers.InvokeEnterZone(eventContext, args),
                 Reducer.MovePlayer args => Reducers.InvokeMovePlayer(eventContext, args),
                 Reducer.Respawn args => Reducers.InvokeRespawn(eventContext, args),
                 Reducer.SpawnEnemyManual args => Reducers.InvokeSpawnEnemyManual(eventContext, args),
