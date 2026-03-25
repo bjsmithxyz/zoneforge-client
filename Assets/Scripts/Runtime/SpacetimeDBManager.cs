@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using SpacetimeDB;
 using SpacetimeDB.Types;
@@ -9,6 +10,11 @@ public class SpacetimeDBManager : MonoBehaviour
     public static DbConnection Conn { get; private set; }
     public static bool IsSubscribed { get; private set; }
     public static Identity LocalIdentity { get; private set; }
+    public static ulong CurrentZoneId { get; private set; }
+
+    private const string ZonePrefKey = "spacetimedb_zone";
+    private static string _serverUri;
+    private static string _dbName;
 
     public static event Action OnConnected;
     public static event Action<Zone> OnZoneInserted;
@@ -28,6 +34,9 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<Enemy> OnEnemyInserted;
     public static event Action<Enemy, Enemy> OnEnemyUpdated;
     public static event Action<Enemy> OnEnemyDeleted;
+    public static event Action<Portal> OnPortalInserted;
+    public static event Action<Portal> OnPortalDeleted;
+    public static event Action<ulong> OnZoneChanged; // fired with OLD zone id
 
     [SerializeField] private string serverUri = "http://localhost:3000";
     [SerializeField] private string databaseName = "zoneforge-server";
@@ -41,6 +50,9 @@ public class SpacetimeDBManager : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
+        _serverUri = serverUri;
+        _dbName    = databaseName;
+        CurrentZoneId = (ulong)PlayerPrefs.GetInt(ZonePrefKey, 1);
     }
 
     private static string TokenPrefKey => Application.isEditor ? "spacetimedb_token_editor" : "spacetimedb_token";
@@ -68,22 +80,26 @@ public class SpacetimeDBManager : MonoBehaviour
     {
         PlayerPrefs.SetString(TokenPrefKey, token);
         PlayerPrefs.Save();
-        Debug.Log($"[SpacetimeDBManager] Connected. Identity: {identity}");
+        Debug.Log($"[SpacetimeDBManager] Connected. Identity: {identity}. Zone: {CurrentZoneId}");
         LocalIdentity = identity;
         conn.SubscriptionBuilder()
             .OnApplied(OnSubscriptionApplied)
             .Subscribe(new[]
             {
+                // Light tables — unfiltered
                 "SELECT * FROM player",
                 "SELECT * FROM zone",
-                "SELECT * FROM entity_instance",
-                "SELECT * FROM terrain_chunk",
                 "SELECT * FROM ability",
                 "SELECT * FROM player_cooldown",
                 "SELECT * FROM status_effect",
                 "SELECT * FROM combat_log",
-                "SELECT * FROM enemy",
                 "SELECT * FROM enemy_def",
+                // Heavy tables — filtered to current zone
+                $"SELECT * FROM terrain_chunk WHERE zone_id = {CurrentZoneId}",
+                $"SELECT * FROM entity_instance WHERE zone_id = {CurrentZoneId}",
+                $"SELECT * FROM enemy WHERE zone_id = {CurrentZoneId}",
+                $"SELECT * FROM portal WHERE source_zone_id = {CurrentZoneId}",
+                $"SELECT * FROM portal WHERE dest_zone_id = {CurrentZoneId}",
             });
     }
 
@@ -114,6 +130,9 @@ public class SpacetimeDBManager : MonoBehaviour
         Conn.Db.Enemy.OnUpdate += (eventCtx, oldEnemy, newEnemy) => OnEnemyUpdated?.Invoke(oldEnemy, newEnemy);
         Conn.Db.Enemy.OnDelete += (eventCtx, enemy) => OnEnemyDeleted?.Invoke(enemy);
 
+        Conn.Db.Portal.OnInsert += (eventCtx, portal) => OnPortalInserted?.Invoke(portal);
+        Conn.Db.Portal.OnDelete += (eventCtx, portal) => OnPortalDeleted?.Invoke(portal);
+
         IsSubscribed = true;
         OnConnected?.Invoke();
     }
@@ -131,5 +150,40 @@ public class SpacetimeDBManager : MonoBehaviour
             Debug.LogWarning($"[SpacetimeDBManager] Disconnected with error: {e.Message}");
         else
             Debug.Log("[SpacetimeDBManager] Disconnected cleanly");
+    }
+
+    /// <summary>
+    /// Called by ZoneTransferManager after transfer animation + server confirmation.
+    /// Flips the rendering gate and fires OnZoneChanged so managers can purge old GOs.
+    /// </summary>
+    public static void SetCurrentZoneId(ulong newZoneId)
+    {
+        ulong oldZoneId = CurrentZoneId;
+        CurrentZoneId = newZoneId;
+        PlayerPrefs.SetInt(ZonePrefKey, (int)newZoneId);
+        PlayerPrefs.Save();
+        Debug.Log($"[SpacetimeDBManager] Zone changed: {oldZoneId} -> {newZoneId}");
+        OnZoneChanged?.Invoke(oldZoneId);
+    }
+
+    /// <summary>
+    /// Call from ZoneTransferManager via StartCoroutine. Rebuilds the connection
+    /// with zone-filtered queries for the current zone only, flushing old zone data.
+    /// </summary>
+    public static IEnumerator ReconnectForNewZone()
+    {
+        yield return new WaitForSeconds(2f);
+        Debug.Log($"[SpacetimeDBManager] Background reconnect for zone {CurrentZoneId}");
+        IsSubscribed = false;
+        string savedToken = PlayerPrefs.GetString(TokenPrefKey, null);
+        Conn = DbConnection.Builder()
+            .WithUri(_serverUri)
+            .WithDatabaseName(_dbName)
+            .WithToken(savedToken)
+            .OnConnect(Instance.OnConnect)
+            .OnConnectError(Instance.OnConnectError)
+            .OnDisconnect(Instance.OnDisconnect)
+            .Build();
+        // New OnConnect fires → re-subscribes with updated CurrentZoneId
     }
 }
