@@ -52,7 +52,7 @@ public class SpacetimeDBManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
         _serverUri = serverUri;
         _dbName    = databaseName;
-        CurrentZoneId = (ulong)PlayerPrefs.GetInt(ZonePrefKey, 1);
+        CurrentZoneId = ulong.TryParse(PlayerPrefs.GetString(ZonePrefKey, "1"), out var savedZone) ? savedZone : 1UL;
     }
 
     private static string TokenPrefKey => Application.isEditor ? "spacetimedb_token_editor" : "spacetimedb_token";
@@ -160,7 +160,7 @@ public class SpacetimeDBManager : MonoBehaviour
     {
         ulong oldZoneId = CurrentZoneId;
         CurrentZoneId = newZoneId;
-        PlayerPrefs.SetInt(ZonePrefKey, (int)newZoneId);
+        PlayerPrefs.SetString(ZonePrefKey, newZoneId.ToString());
         PlayerPrefs.Save();
         Debug.Log($"[SpacetimeDBManager] Zone changed: {oldZoneId} -> {newZoneId}");
         OnZoneChanged?.Invoke(oldZoneId);
