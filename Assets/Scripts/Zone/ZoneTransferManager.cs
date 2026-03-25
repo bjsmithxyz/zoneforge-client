@@ -23,6 +23,11 @@ public class ZoneTransferManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    void OnDestroy()
+    {
+        SpacetimeDBManager.OnPlayerUpdated -= OnPlayerUpdated;
+    }
+
     /// Called by PortalManager when the local player enters a portal trigger radius.
     public void BeginTransfer(Portal portal)
     {
@@ -68,7 +73,7 @@ public class ZoneTransferManager : MonoBehaviour
 
     void TryCompleteTransfer()
     {
-        if (!_transferConfirmed || !_animationComplete) return;
+        if (!IsTransferring || !_transferConfirmed || !_animationComplete) return;
         SpacetimeDBManager.OnPlayerUpdated -= OnPlayerUpdated;
         CompleteTransfer();
     }
