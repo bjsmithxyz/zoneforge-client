@@ -79,7 +79,7 @@ public class PortalManager : MonoBehaviour
         {
             var portal = SpacetimeDBManager.Conn.Db.Portal.Id.Find(kvp.Key);
             if (portal == null) continue;
-            bool reverse = portal.DestZoneId == SpacetimeDBManager.CurrentZoneId;
+            bool reverse = portal.DestZoneId == SpacetimeDBManager.CurrentZoneId && portal.Bidirectional;
             float px = reverse ? portal.DestSpawnX : portal.SourceX;
             float py = reverse ? portal.DestSpawnY : portal.SourceY;
             var portalPos = new Vector3(px, 0f, py);
@@ -123,11 +123,13 @@ public class PortalManager : MonoBehaviour
         ringGo.transform.localScale    = new Vector3(2f, 0.03f, 2f);
         Destroy(ringGo.GetComponent<Collider>());
         var rend = ringGo.GetComponent<Renderer>();
-        var mat  = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+        var shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (shader == null) { Debug.LogWarning("[PortalManager] URP Lit shader not found — portal ring will be pink"); }
+        var mat  = new Material(shader);
         mat.EnableKeyword("_EMISSION");
         mat.SetColor("_EmissionColor", new Color(0.3f, 0.8f, 1f) * 2f);
         mat.color = new Color(0.3f, 0.8f, 1f, 0.5f);
-        rend.material = mat;
+        rend.sharedMaterial = mat;
 
         _portals[portal.Id] = go;
     }
