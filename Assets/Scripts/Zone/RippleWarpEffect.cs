@@ -10,6 +10,7 @@ public class RippleWarpEffect : MonoBehaviour
     public static RippleWarpEffect Instance { get; private set; }
 
     private Canvas _canvas;
+    private Coroutine _activeRoutine;
 
     private const float Duration    = 0.6f;
     private const int   RingCount   = 3;
@@ -28,8 +29,12 @@ public class RippleWarpEffect : MonoBehaviour
         gameObject.AddComponent<GraphicRaycaster>();
     }
 
-    /// <summary>Plays the Ripple Warp animation then calls onComplete.</summary>
-    public void Play(Action onComplete) => StartCoroutine(PlayRoutine(onComplete));
+    /// <summary>Plays the Ripple Warp animation then calls onComplete. No-ops if already playing.</summary>
+    public void Play(Action onComplete)
+    {
+        if (_activeRoutine != null) return;
+        _activeRoutine = StartCoroutine(PlayRoutine(onComplete));
+    }
 
     IEnumerator PlayRoutine(Action onComplete)
     {
@@ -59,7 +64,7 @@ public class RippleWarpEffect : MonoBehaviour
                 if (t <= 0f) continue;
                 float size  = Mathf.Lerp(10f, maxSize, t);
                 float alpha = Mathf.Lerp(RingColour.a, 0f, t);
-                var rt  = rings[i].img.GetComponent<RectTransform>();
+                var rt  = rings[i].img.rectTransform;
                 rt.sizeDelta = Vector2.one * size;
                 rings[i].img.color = new Color(RingColour.r, RingColour.g, RingColour.b, alpha);
             }
@@ -69,6 +74,7 @@ public class RippleWarpEffect : MonoBehaviour
         foreach (var (img, _) in rings)
             Destroy(img.gameObject);
 
+        _activeRoutine = null;
         onComplete?.Invoke();
     }
 }
