@@ -69,31 +69,17 @@ public class CombatManager : MonoBehaviour
             }
         }
 
-        // Determine attacker position
+        // Determine attacker position — check enemies first, then players
         Vector3 attackerPos = default;
-        if (log.AttackerIsEnemy)
-        {
-            if (!_enemyPositions.TryGetValue(log.AttackerId, out attackerPos))
-                Debug.LogWarning($"[CombatManager] No position for enemy attacker {log.AttackerId}");
-        }
-        else
-        {
-            if (!_playerPositions.TryGetValue(log.AttackerId, out attackerPos))
-                Debug.LogWarning($"[CombatManager] No position for player attacker {log.AttackerId}");
-        }
+        if (!_enemyPositions.TryGetValue(log.AttackerId, out attackerPos) &&
+            !_playerPositions.TryGetValue(log.AttackerId, out attackerPos))
+            Debug.LogWarning($"[CombatManager] No position for attacker {log.AttackerId}");
 
-        // Determine target position
+        // Determine target position — check enemies first, then players
         Vector3 targetPos = default;
-        if (log.TargetIsEnemy)
-        {
-            if (!_enemyPositions.TryGetValue(log.TargetId, out targetPos))
-                Debug.LogWarning($"[CombatManager] No position for enemy target {log.TargetId}");
-        }
-        else
-        {
-            if (!_playerPositions.TryGetValue(log.TargetId, out targetPos))
-                Debug.LogWarning($"[CombatManager] No position for player target {log.TargetId}");
-        }
+        if (!_enemyPositions.TryGetValue(log.TargetId, out targetPos) &&
+            !_playerPositions.TryGetValue(log.TargetId, out targetPos))
+            Debug.LogWarning($"[CombatManager] No position for target {log.TargetId}");
 
         if (ability != null && ability.AbilityType == AbilityType.Projectile)
         {

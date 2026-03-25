@@ -664,6 +664,7 @@ namespace SpacetimeDB.Types
                 Reducer.Respawn args => Reducers.InvokeRespawn(eventContext, args),
                 Reducer.SpawnEnemyManual args => Reducers.InvokeSpawnEnemyManual(eventContext, args),
                 Reducer.SpawnEntity args => Reducers.InvokeSpawnEntity(eventContext, args),
+                Reducer.UpdateAiState args => Reducers.InvokeUpdateAiState(eventContext, args),
                 Reducer.UpdateTerrainChunk args => Reducers.InvokeUpdateTerrainChunk(eventContext, args),
                 Reducer.UseAbility args => Reducers.InvokeUseAbility(eventContext, args),
                 _ => throw new ArgumentOutOfRangeException("Reducer", $"Unknown reducer {reducer}")
