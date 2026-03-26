@@ -32,6 +32,28 @@ public class PortalManager : MonoBehaviour
         SpacetimeDBManager.OnPortalDeleted  -= OnPortalDeleted;
         SpacetimeDBManager.OnConnected      -= OnConnected;
         SpacetimeDBManager.OnZoneChanged    -= OnZoneChanged;
+        TerrainRenderer.OnMeshBuilt         -= OnTerrainBuilt;
+    }
+
+    void OnEnable()  => TerrainRenderer.OnMeshBuilt += OnTerrainBuilt;
+    void OnDisable() => TerrainRenderer.OnMeshBuilt -= OnTerrainBuilt;
+
+    /// <summary>
+    /// Re-snap all portal GOs to the terrain surface after each mesh rebuild.
+    /// Portals often spawn before terrain chunks are fully loaded, leaving them at Y=0.
+    /// </summary>
+    void OnTerrainBuilt(Mesh _, Transform __)
+    {
+        if (SpacetimeDBManager.Conn == null) return;
+        foreach (var kvp in _portals)
+        {
+            var portal = SpacetimeDBManager.Conn.Db.Portal.Id.Find(kvp.Key);
+            if (portal == null) continue;
+            bool reverse = portal.DestZoneId == SpacetimeDBManager.CurrentZoneId && portal.Bidirectional;
+            float px = reverse ? portal.DestSpawnX : portal.SourceX;
+            float py = reverse ? portal.DestSpawnY : portal.SourceY;
+            kvp.Value.transform.position = new Vector3(px, TerrainRenderer.GetSurfaceHeight(px, py), py);
+        }
     }
 
     void OnConnected()
@@ -107,7 +129,8 @@ public class PortalManager : MonoBehaviour
         float py = reverse ? portal.DestSpawnY : portal.SourceY;
 
         var go = new GameObject($"Portal_{portal.Id}");
-        go.transform.position = new Vector3(px, 0f, py);
+        float portalTerrainY = TerrainRenderer.GetSurfaceHeight(px, py);
+        go.transform.position = new Vector3(px, portalTerrainY, py);
 
         // Invisible trigger cylinder for reference (no MeshRenderer)
         var col = go.AddComponent<CapsuleCollider>();

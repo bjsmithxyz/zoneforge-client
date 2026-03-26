@@ -36,7 +36,8 @@ public class PlayerController : MonoBehaviour
     public void Init(Player player, bool isLocal)
     {
         IsLocal = isLocal;
-        Vector3 spawnPos = new Vector3(player.PositionX, 1f, player.PositionY);
+        float spawnTerrainY = TerrainRenderer.GetSurfaceHeight(player.PositionX, player.PositionY);
+        Vector3 spawnPos = new Vector3(player.PositionX, spawnTerrainY + 1f, player.PositionY);
         transform.position = spawnPos;
         _lastSentPosition = spawnPos;
         _targetPosition = spawnPos;
@@ -87,10 +88,7 @@ public class PlayerController : MonoBehaviour
             if (_agent != null)
                 _agent.Move(dir * _speed * Time.deltaTime);  // NavMesh constrains movement
             else
-            {
                 transform.position += dir * _speed * Time.deltaTime;
-                EnforceY();
-            }
             // Active input takes priority — cancel any in-progress reconciliation
             // so the server's lagged position doesn't fight the new direction.
             _reconciling = false;
@@ -108,11 +106,16 @@ public class PlayerController : MonoBehaviour
             {
                 transform.position = Vector3.MoveTowards(
                     transform.position, _reconcileTarget, _reconcileSpeed * Time.deltaTime);
-                EnforceY();
                 if (Vector3.Distance(transform.position, _reconcileTarget) < 0.001f)
                     _reconciling = false;
             }
         }
+
+        // Keep Y snapped to terrain surface every frame until NavMeshAgent takes over.
+        // Without this, the player stays at spawn-time Y=1 (terrain not yet loaded)
+        // until they move, leaving them clipped through terrain while standing still.
+        if (_agent == null)
+            EnforceY();
 
         // 3. Throttled reducer send (10 Hz, only if moved)
         _sendTimer += Time.deltaTime;
@@ -124,7 +127,19 @@ public class PlayerController : MonoBehaviour
             float dz = pos.z - _lastSentPosition.z;
             if (dx * dx + dz * dz > 0.01f * 0.01f)
             {
-                SpacetimeDBManager.Conn.Reducers.MovePlayer(pos.x, pos.z);
+                // Clamp to zone bounds before sending — the NavMeshAgent normally
+                // prevents out-of-bounds movement, but may not be active yet while
+                // the NavMesh is still baking on first load.
+                float sendX = pos.x;
+                float sendZ = pos.z;
+                foreach (var zone in SpacetimeDBManager.Conn.Db.Zone.Iter())
+                {
+                    if (zone.Id != SpacetimeDBManager.CurrentZoneId) continue;
+                    sendX = Mathf.Clamp(pos.x, 0f, (float)zone.TerrainWidth  - 1f);
+                    sendZ = Mathf.Clamp(pos.z, 0f, (float)zone.TerrainHeight - 1f);
+                    break;
+                }
+                SpacetimeDBManager.Conn.Reducers.MovePlayer(sendX, sendZ);
                 _lastSentPosition = pos;
             }
         }
@@ -142,7 +157,8 @@ public class PlayerController : MonoBehaviour
     /// </summary>
     public void ReceiveServerPosition(Player newPlayer)
     {
-        Vector3 serverPos = new Vector3(newPlayer.PositionX, 1f, newPlayer.PositionY);
+        float terrainY = TerrainRenderer.GetSurfaceHeight(newPlayer.PositionX, newPlayer.PositionY);
+        Vector3 serverPos = new Vector3(newPlayer.PositionX, terrainY + 1f, newPlayer.PositionY);
 
         if (!IsLocal)
         {
@@ -185,9 +201,12 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Force Y to 1.0f after every position write (camera is parented here)
-    void EnforceY() =>
-        transform.position = new Vector3(transform.position.x, 1f, transform.position.z);
+    // Keep Y at terrain surface + 1 (capsule center 1 unit above ground).
+    void EnforceY()
+    {
+        float terrainY = TerrainRenderer.GetSurfaceHeight(transform.position.x, transform.position.z);
+        transform.position = new Vector3(transform.position.x, terrainY + 1f, transform.position.z);
+    }
 
     Vector3 GetCameraRelativeInput()
     {

@@ -17,6 +17,8 @@ public class TerrainRenderer : MonoBehaviour
 
     [SerializeField] private Material _terrainMaterial;
 
+    public static TerrainRenderer Instance { get; private set; }
+
     private Mesh _mesh;
     private MeshFilter _filter;
     private MeshRenderer _renderer;
@@ -35,6 +37,7 @@ public class TerrainRenderer : MonoBehaviour
 
     void Awake()
     {
+        Instance  = this;
         _filter   = GetComponent<MeshFilter>();
         _renderer = GetComponent<MeshRenderer>();
         _mesh = new Mesh { name = "TerrainMesh" };
@@ -42,11 +45,39 @@ public class TerrainRenderer : MonoBehaviour
         _filter.mesh = _mesh;
     }
 
+    /// <summary>
+    /// Returns the terrain surface Y at world position (wx, wz).
+    /// Returns 0 if terrain is not yet loaded at this position.
+    /// </summary>
+    public static float GetSurfaceHeight(float wx, float wz)
+    {
+        if (Instance == null) return 0f;
+        // Convert world XZ to terrain-local grid coordinates (accounts for GO position offset).
+        Vector3 offset = Instance.transform.position;
+        float gx = wx - offset.x;
+        float gz = wz - offset.z;
+
+        // Bilinear interpolation across the quad so the returned height matches the
+        // actual mesh surface between vertices, not just the nearest corner.
+        int x0 = Mathf.FloorToInt(gx);
+        int z0 = Mathf.FloorToInt(gz);
+        float tx = gx - x0;
+        float tz = gz - z0;
+
+        float h00 = Instance.SampleHeight(x0,   z0);
+        float h10 = Instance.SampleHeight(x0+1, z0);
+        float h01 = Instance.SampleHeight(x0,   z0+1);
+        float h11 = Instance.SampleHeight(x0+1, z0+1);
+
+        float localY = Mathf.Lerp(Mathf.Lerp(h00, h10, tx), Mathf.Lerp(h01, h11, tx), tz);
+        return offset.y + localY;
+    }
+
     void OnEnable()
     {
         SpacetimeDBManager.OnConnected            += OnConnected;
         SpacetimeDBManager.OnTerrainChunkUpdated  += OnChunkUpdated;
-        EditorState.OnActiveZoneChanged           += OnActiveZoneChanged;
+        SpacetimeDBManager.OnZoneChanged          += OnActiveZoneChanged;
 
         if (SpacetimeDBManager.IsSubscribed)
             RebuildFromActiveZone();
@@ -56,7 +87,7 @@ public class TerrainRenderer : MonoBehaviour
     {
         SpacetimeDBManager.OnConnected           -= OnConnected;
         SpacetimeDBManager.OnTerrainChunkUpdated -= OnChunkUpdated;
-        EditorState.OnActiveZoneChanged          -= OnActiveZoneChanged;
+        SpacetimeDBManager.OnZoneChanged         -= OnActiveZoneChanged;
     }
 
     // -----------------------------------------------------------------------
@@ -72,7 +103,7 @@ public class TerrainRenderer : MonoBehaviour
 
     void OnChunkUpdated(TerrainChunk chunk)
     {
-        if (chunk.ZoneId != EditorState.ActiveZoneId) return;
+        if (chunk.ZoneId != SpacetimeDBManager.CurrentZoneId) return;
         _chunks[((int)chunk.ChunkX, (int)chunk.ChunkZ)] = chunk;
         PatchChunk(chunk);
     }
@@ -81,14 +112,14 @@ public class TerrainRenderer : MonoBehaviour
 
     void RebuildFromActiveZone()
     {
-        if (SpacetimeDBManager.Conn == null || !EditorState.HasActiveZone) return;
+        if (SpacetimeDBManager.Conn == null || SpacetimeDBManager.CurrentZoneId == 0) return;
 
         _terrainWidth  = 0;
         _terrainHeight = 0;
 
         foreach (var zone in SpacetimeDBManager.Conn.Db.Zone.Iter())
         {
-            if (zone.Id != EditorState.ActiveZoneId) continue;
+            if (zone.Id != SpacetimeDBManager.CurrentZoneId) continue;
             _terrainWidth  = (int)zone.TerrainWidth;
             _terrainHeight = (int)zone.TerrainHeight;
             break;
@@ -100,7 +131,7 @@ public class TerrainRenderer : MonoBehaviour
         _chunks.Clear();
         foreach (var chunk in SpacetimeDBManager.Conn.Db.TerrainChunk.Iter())
         {
-            if (chunk.ZoneId != EditorState.ActiveZoneId) continue;
+            if (chunk.ZoneId != SpacetimeDBManager.CurrentZoneId) continue;
             _chunks[((int)chunk.ChunkX, (int)chunk.ChunkZ)] = chunk;
         }
 

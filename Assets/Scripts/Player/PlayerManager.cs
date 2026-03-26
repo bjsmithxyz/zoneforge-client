@@ -45,6 +45,7 @@ public class PlayerManager : MonoBehaviour
         // Backfill: initial rows arrive before SpacetimeDBManager registers
         // Conn.Db.Player.OnInsert, so OnPlayerInserted never fires for them.
         bool hasLocalPlayer = false;
+        Player localPlayer = null;
         foreach (var player in SpacetimeDBManager.Conn.Db.Player.Iter())
         {
             bool inCurrentZone = player.Identity == SpacetimeDBManager.LocalIdentity
@@ -52,12 +53,25 @@ public class PlayerManager : MonoBehaviour
             if (!_players.ContainsKey(player.Id) && inCurrentZone)
                 SpawnPlayer(player);
             if (player.Identity == SpacetimeDBManager.LocalIdentity)
+            {
                 hasLocalPlayer = true;
+                localPlayer = player;
+            }
         }
         if (!hasLocalPlayer)
         {
             Debug.Log("[PlayerManager] No local player row found — calling create_player");
             SpacetimeDBManager.Conn.Reducers.CreatePlayer("Player");
+            return;
+        }
+
+        // If the server has the player in a different zone than what we subscribed to
+        // (e.g. PlayerPrefs held a stale zone id), reconnect with the correct zone.
+        if (localPlayer != null && localPlayer.ZoneId != SpacetimeDBManager.CurrentZoneId)
+        {
+            Debug.Log($"[PlayerManager] Zone mismatch: subscribed to {SpacetimeDBManager.CurrentZoneId} but player is in {localPlayer.ZoneId}. Reconnecting.");
+            SpacetimeDBManager.SetCurrentZoneId(localPlayer.ZoneId);
+            StartCoroutine(SpacetimeDBManager.ReconnectForNewZone());
         }
     }
 
@@ -91,6 +105,18 @@ public class PlayerManager : MonoBehaviour
     void OnPlayerInserted(Player player)
     {
         if (_players.ContainsKey(player.Id)) return; // guard against backfill duplicate
+
+        // Local player just created for the first time — if the server put them in a
+        // different zone than we subscribed to, reconnect with the correct zone.
+        if (player.Identity == SpacetimeDBManager.LocalIdentity
+            && player.ZoneId != SpacetimeDBManager.CurrentZoneId)
+        {
+            Debug.Log($"[PlayerManager] New local player in zone {player.ZoneId} but subscribed to {SpacetimeDBManager.CurrentZoneId}. Reconnecting.");
+            SpacetimeDBManager.SetCurrentZoneId(player.ZoneId);
+            StartCoroutine(SpacetimeDBManager.ReconnectForNewZone());
+            return;
+        }
+
         // Zone-gate: only spawn remote players in the current zone
         if (player.Identity != SpacetimeDBManager.LocalIdentity
             && player.ZoneId != SpacetimeDBManager.CurrentZoneId) return;
@@ -153,7 +179,13 @@ public class PlayerManager : MonoBehaviour
         {
             var ctrl = go.GetComponent<PlayerController>();
             if (ctrl == null || !ctrl.IsLocal) continue;
-            if (go.GetComponent<NavMeshAgent>() != null) continue;  // already added
+            var agent = go.GetComponent<NavMeshAgent>();
+            if (agent != null)
+            {
+                // Re-snap to new NavMesh surface after zone change or terrain rebuild.
+                agent.Warp(go.transform.position);
+                continue;
+            }
             AddNavMeshAgent(go, ctrl);
         }
     }

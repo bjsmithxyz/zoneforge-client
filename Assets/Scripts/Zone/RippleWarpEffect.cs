@@ -9,7 +9,8 @@ public class RippleWarpEffect : MonoBehaviour
 {
     public static RippleWarpEffect Instance { get; private set; }
 
-    private Canvas _canvas;
+    private Canvas  _canvas;
+    private Sprite  _circleSprite;
     private Coroutine _activeRoutine;
 
     private const float Duration    = 0.6f;
@@ -27,6 +28,34 @@ public class RippleWarpEffect : MonoBehaviour
         _canvas.sortingOrder = 999;
         gameObject.AddComponent<CanvasScaler>();
         gameObject.AddComponent<GraphicRaycaster>();
+
+        // UI/Skin/Knob.psd is a built-in RP asset unavailable in URP.
+        // Generate an equivalent white circle texture at runtime instead.
+        _circleSprite = CreateCircleSprite(64);
+    }
+
+    void OnDestroy()
+    {
+        if (_circleSprite != null)
+        {
+            Destroy(_circleSprite.texture);
+            Destroy(_circleSprite);
+        }
+    }
+
+    static Sprite CreateCircleSprite(int size)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        float r = size * 0.5f;
+        for (int y = 0; y < size; y++)
+        for (int x = 0; x < size; x++)
+        {
+            float dx = x - r + 0.5f;
+            float dy = y - r + 0.5f;
+            tex.SetPixel(x, y, dx * dx + dy * dy <= r * r ? Color.white : Color.clear);
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
     }
 
     /// <summary>Plays the Ripple Warp animation then calls onComplete. No-ops if already playing.</summary>
@@ -45,7 +74,7 @@ public class RippleWarpEffect : MonoBehaviour
             go.transform.SetParent(_canvas.transform, false);
             var img  = go.AddComponent<Image>();
             img.color   = new Color(RingColour.r, RingColour.g, RingColour.b, 0f);
-            img.sprite  = Resources.GetBuiltinResource<Sprite>("UI/Skin/Knob.psd");
+            img.sprite  = _circleSprite;
             var rt       = go.GetComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = Vector2.one * 10f;

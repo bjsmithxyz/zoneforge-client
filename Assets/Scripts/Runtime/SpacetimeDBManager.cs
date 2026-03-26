@@ -144,6 +144,8 @@ public class SpacetimeDBManager : MonoBehaviour
 
     void OnDisconnect(DbConnection conn, Exception e)
     {
+        // Ignore stale close events from a previous connection that was replaced during zone transfer.
+        if (conn != Conn) return;
         LocalIdentity = default;
         IsSubscribed = false;
         if (e != null)

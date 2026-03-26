@@ -73,9 +73,7 @@ public class NavMeshManager : MonoBehaviour
         _dataInstance = NavMesh.AddNavMeshData(_navMeshData);
         Debug.Log("[NavMeshManager] NavMesh baked successfully");
 
-        bool firstBake = !IsReady;
         IsReady = true;
-        if (firstBake)
-            OnNavMeshReady?.Invoke();
+        OnNavMeshReady?.Invoke();  // fires every bake so agents re-snap after zone change
     }
 }

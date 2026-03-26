@@ -22,7 +22,7 @@ public class WaterRenderer : MonoBehaviour
     void OnEnable()
     {
         SpacetimeDBManager.OnConnected          += RefreshWater;
-        EditorState.OnActiveZoneChanged         += OnZoneChanged;
+        SpacetimeDBManager.OnZoneChanged        += OnZoneChanged;
 
         if (SpacetimeDBManager.IsSubscribed) RefreshWater();
     }
@@ -30,14 +30,14 @@ public class WaterRenderer : MonoBehaviour
     void OnDisable()
     {
         SpacetimeDBManager.OnConnected      -= RefreshWater;
-        EditorState.OnActiveZoneChanged     -= OnZoneChanged;
+        SpacetimeDBManager.OnZoneChanged    -= OnZoneChanged;
     }
 
     void OnZoneChanged(ulong _) => RefreshWater();
 
     void RefreshWater()
     {
-        if (SpacetimeDBManager.Conn == null || !EditorState.HasActiveZone)
+        if (SpacetimeDBManager.Conn == null || SpacetimeDBManager.CurrentZoneId == 0)
         {
             gameObject.SetActive(false);
             return;
@@ -45,7 +45,7 @@ public class WaterRenderer : MonoBehaviour
 
         foreach (var zone in SpacetimeDBManager.Conn.Db.Zone.Iter())
         {
-            if (zone.Id != EditorState.ActiveZoneId) continue;
+            if (zone.Id != SpacetimeDBManager.CurrentZoneId) continue;
             BuildWaterMesh(zone.TerrainWidth, zone.TerrainHeight, zone.WaterLevel);
             return;
         }
