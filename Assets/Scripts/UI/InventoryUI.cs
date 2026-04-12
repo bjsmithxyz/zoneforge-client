@@ -29,26 +29,29 @@ public class InventoryUI : MonoBehaviour
     private VisualElement _dragGhost;
     private int           _dragSourceSlot = -1;
 
+    private readonly System.Collections.Generic.List<ulong> _localSlotOrder = new();
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
-    }
 
-    void OnEnable()
-    {
         _doc  = GetComponent<UIDocument>();
         _root = _doc.rootVisualElement;
         _root.pickingMode = PickingMode.Ignore;
         BuildUI();
         _panel.style.display = DisplayStyle.None;
+    }
 
+    void OnEnable()
+    {
         InventoryManager.OnInventoryChanged += Refresh;
     }
 
     void OnDisable()
     {
         InventoryManager.OnInventoryChanged -= Refresh;
+        CancelDrag();
     }
 
     void Update()
@@ -184,26 +187,37 @@ public class InventoryUI : MonoBehaviour
     void Refresh()
     {
         if (InventoryManager.Instance == null) return;
+
+        // Drop inventory ids that no longer exist
+        for (int i = _localSlotOrder.Count - 1; i >= 0; i--)
+        {
+            if (!InventoryManager.Instance.Inventory.ContainsKey(_localSlotOrder[i]))
+                _localSlotOrder.RemoveAt(i);
+        }
+
+        // Append newly present ids
+        foreach (var kv in InventoryManager.Instance.Inventory)
+        {
+            if (!_localSlotOrder.Contains(kv.Key))
+                _localSlotOrder.Add(kv.Key);
+        }
+
+        // Clear all slots
         for (int i = 0; i < SlotCount; i++)
         {
             _slotItemDefIds[i] = 0;
             _slots[i].style.backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.25f, 1f));
-            (_slots[i].Q<Label>("qty")).text = "";
+            _slots[i].Q<Label>("qty").text = "";
         }
 
-        int slotIndex = 0;
-        foreach (var kv in InventoryManager.Instance.Inventory)
+        // Render from stable order
+        for (int i = 0; i < _localSlotOrder.Count && i < SlotCount; i++)
         {
-            if (slotIndex >= SlotCount) break;
-            var inv = kv.Value;
-            _slotItemDefIds[slotIndex] = inv.ItemDefId;
-
+            if (!InventoryManager.Instance.Inventory.TryGetValue(_localSlotOrder[i], out var inv)) continue;
+            _slotItemDefIds[i] = inv.ItemDefId;
             if (InventoryManager.Instance.ItemDefs.TryGetValue(inv.ItemDefId, out var def))
-                _slots[slotIndex].style.backgroundColor = new StyleColor(GetRarityColor(def.Rarity));
-
-            var qtyLabel = _slots[slotIndex].Q<Label>("qty");
-            qtyLabel.text = inv.Quantity > 1 ? inv.Quantity.ToString() : "";
-            slotIndex++;
+                _slots[i].style.backgroundColor = new StyleColor(GetRarityColor(def.Rarity));
+            _slots[i].Q<Label>("qty").text = inv.Quantity > 1 ? inv.Quantity.ToString() : "";
         }
     }
 
@@ -211,6 +225,7 @@ public class InventoryUI : MonoBehaviour
 
     void BeginDrag(int slotIndex, PointerDownEvent evt)
     {
+        if (_dragSourceSlot >= 0) return;  // drag already in progress
         _dragSourceSlot = slotIndex;
 
         _dragGhost = new VisualElement();
@@ -262,20 +277,29 @@ public class InventoryUI : MonoBehaviour
         return -1;
     }
 
+    void CancelDrag()
+    {
+        if (_dragGhost != null && _dragGhost.parent != null)
+            _dragGhost.parent.Remove(_dragGhost);
+        _dragGhost = null;
+        _dragSourceSlot = -1;
+
+        if (_root != null)
+        {
+            _root.UnregisterCallback<PointerMoveEvent>(OnDragMove);
+            _root.UnregisterCallback<PointerUpEvent>(OnDragRelease);
+        }
+    }
+
     /// Visual-only slot swap (client-side — no server call).
     void SwapSlots(int a, int b)
     {
-        ulong      tmpId    = _slotItemDefIds[a];
-        StyleColor tmpColor = _slots[a].style.backgroundColor;
-        string     tmpQty   = _slots[a].Q<Label>("qty").text;
+        // Extend _localSlotOrder if user swapped into a gap
+        while (_localSlotOrder.Count <= System.Math.Max(a, b))
+            _localSlotOrder.Add(0);
 
-        _slotItemDefIds[a] = _slotItemDefIds[b];
-        _slots[a].style.backgroundColor  = _slots[b].style.backgroundColor;
-        _slots[a].Q<Label>("qty").text   = _slots[b].Q<Label>("qty").text;
-
-        _slotItemDefIds[b]               = tmpId;
-        _slots[b].style.backgroundColor  = tmpColor;
-        _slots[b].Q<Label>("qty").text   = tmpQty;
+        (_localSlotOrder[a], _localSlotOrder[b]) = (_localSlotOrder[b], _localSlotOrder[a]);
+        Refresh();
     }
 
     // Tooltip
@@ -284,6 +308,7 @@ public class InventoryUI : MonoBehaviour
     {
         ulong defId = _slotItemDefIds[slotIndex];
         if (defId == 0) { _tooltip.style.display = DisplayStyle.None; return; }
+        if (InventoryManager.Instance == null) { _tooltip.style.display = DisplayStyle.None; return; }
         if (!InventoryManager.Instance.ItemDefs.TryGetValue(defId, out var def))
         { _tooltip.style.display = DisplayStyle.None; return; }
 
