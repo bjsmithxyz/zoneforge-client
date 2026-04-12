@@ -15,6 +15,8 @@ public class InventoryManager : MonoBehaviour
     public readonly Dictionary<ulong, ItemDefinition> ItemDefs = new();
     public readonly Dictionary<ulong, ItemDrop> ItemDrops = new();
 
+    private ulong _localPlayerId;
+
     public static event System.Action OnInventoryChanged;
     public static event System.Action OnEquipmentChanged;
 
@@ -33,6 +35,7 @@ public class InventoryManager : MonoBehaviour
         SpacetimeDBManager.OnInventoryDeleted  += OnInventoryRowDeleted;
         SpacetimeDBManager.OnEquipmentInserted += OnEquipmentRowInserted;
         SpacetimeDBManager.OnEquipmentUpdated  += OnEquipmentRowUpdated;
+        SpacetimeDBManager.OnEquipmentDeleted  += OnEquipmentRowDeleted;
         SpacetimeDBManager.OnItemDropInserted  += OnItemDropInserted;
         SpacetimeDBManager.OnItemDropDeleted   += OnItemDropDeleted;
     }
@@ -48,6 +51,7 @@ public class InventoryManager : MonoBehaviour
         SpacetimeDBManager.OnInventoryDeleted  -= OnInventoryRowDeleted;
         SpacetimeDBManager.OnEquipmentInserted -= OnEquipmentRowInserted;
         SpacetimeDBManager.OnEquipmentUpdated  -= OnEquipmentRowUpdated;
+        SpacetimeDBManager.OnEquipmentDeleted  -= OnEquipmentRowDeleted;
         SpacetimeDBManager.OnItemDropInserted  -= OnItemDropInserted;
         SpacetimeDBManager.OnItemDropDeleted   -= OnItemDropDeleted;
     }
@@ -57,14 +61,16 @@ public class InventoryManager : MonoBehaviour
         foreach (var def in SpacetimeDBManager.Conn.Db.ItemDef.Iter())
             ItemDefs[def.Id] = def;
 
-        var localPlayerId = GetLocalPlayerId();
-        if (localPlayerId == 0) return;
-
-        foreach (var inv in SpacetimeDBManager.Conn.Db.Inventory.Iter())
-            if (inv.PlayerId == localPlayerId) Inventory[inv.Id] = inv;
-
-        foreach (var eq in SpacetimeDBManager.Conn.Db.Equipment.Iter())
-            if (eq.PlayerId == localPlayerId) { Equipment = eq; break; }
+        _localPlayerId = LookupLocalPlayerId();
+        if (_localPlayerId == 0)
+        {
+            Debug.Log("[InventoryManager] Local player row not yet present — deferring inventory/equipment backfill until player insert arrives.");
+            SpacetimeDBManager.OnPlayerInserted += OnPlayerInsertedDeferred;
+        }
+        else
+        {
+            BackfillLocalPlayerState();
+        }
 
         foreach (var drop in SpacetimeDBManager.Conn.Db.ItemDrop.Iter())
             ItemDrops[drop.Id] = drop;
@@ -73,16 +79,35 @@ public class InventoryManager : MonoBehaviour
         OnEquipmentChanged?.Invoke();
     }
 
-    void OnZoneChanged(ulong _oldZoneId)
+    void OnPlayerInsertedDeferred(Player player)
     {
-        ItemDrops.Clear();
+        if (player.Identity != SpacetimeDBManager.LocalIdentity) return;
+        _localPlayerId = player.Id;
+        BackfillLocalPlayerState();
+        SpacetimeDBManager.OnPlayerInserted -= OnPlayerInsertedDeferred;
+        OnInventoryChanged?.Invoke();
+        OnEquipmentChanged?.Invoke();
     }
 
-    static ulong GetLocalPlayerId()
+    void BackfillLocalPlayerState()
+    {
+        foreach (var inv in SpacetimeDBManager.Conn.Db.Inventory.Iter())
+            if (inv.PlayerId == _localPlayerId) Inventory[inv.Id] = inv;
+
+        foreach (var eq in SpacetimeDBManager.Conn.Db.Equipment.Iter())
+            if (eq.PlayerId == _localPlayerId) { Equipment = eq; break; }
+    }
+
+    static ulong LookupLocalPlayerId()
     {
         foreach (var p in SpacetimeDBManager.Conn.Db.Player.Iter())
             if (p.Identity == SpacetimeDBManager.LocalIdentity) return p.Id;
         return 0;
+    }
+
+    void OnZoneChanged(ulong _oldZoneId)
+    {
+        ItemDrops.Clear();
     }
 
     void OnItemDefInserted(ItemDefinition def) => ItemDefs[def.Id] = def;
@@ -90,36 +115,43 @@ public class InventoryManager : MonoBehaviour
 
     void OnInventoryRowInserted(Inventory row)
     {
-        if (row.PlayerId != GetLocalPlayerId()) return;
+        if (_localPlayerId == 0 || row.PlayerId != _localPlayerId) return;
         Inventory[row.Id] = row;
         OnInventoryChanged?.Invoke();
     }
 
-    void OnInventoryRowUpdated(Inventory oldRow, Inventory newRow)
+    void OnInventoryRowUpdated(Inventory _oldRow, Inventory newRow)
     {
-        if (newRow.PlayerId != GetLocalPlayerId()) return;
+        if (_localPlayerId == 0 || newRow.PlayerId != _localPlayerId) return;
         Inventory[newRow.Id] = newRow;
         OnInventoryChanged?.Invoke();
     }
 
     void OnInventoryRowDeleted(Inventory row)
     {
-        if (row.PlayerId != GetLocalPlayerId()) return;
+        if (_localPlayerId == 0 || row.PlayerId != _localPlayerId) return;
         Inventory.Remove(row.Id);
         OnInventoryChanged?.Invoke();
     }
 
     void OnEquipmentRowInserted(Equipment eq)
     {
-        if (eq.PlayerId != GetLocalPlayerId()) return;
+        if (_localPlayerId == 0 || eq.PlayerId != _localPlayerId) return;
         Equipment = eq;
         OnEquipmentChanged?.Invoke();
     }
 
-    void OnEquipmentRowUpdated(Equipment oldEq, Equipment newEq)
+    void OnEquipmentRowUpdated(Equipment _oldEq, Equipment newEq)
     {
-        if (newEq.PlayerId != GetLocalPlayerId()) return;
+        if (_localPlayerId == 0 || newEq.PlayerId != _localPlayerId) return;
         Equipment = newEq;
+        OnEquipmentChanged?.Invoke();
+    }
+
+    void OnEquipmentRowDeleted(Equipment eq)
+    {
+        if (_localPlayerId != 0 && eq.PlayerId != _localPlayerId) return;
+        Equipment = null;
         OnEquipmentChanged?.Invoke();
     }
 

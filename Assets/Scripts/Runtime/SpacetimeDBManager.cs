@@ -45,6 +45,7 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<Inventory> OnInventoryDeleted;
     public static event Action<Equipment> OnEquipmentInserted;
     public static event Action<Equipment, Equipment> OnEquipmentUpdated;
+    public static event Action<Equipment> OnEquipmentDeleted;
     public static event Action<ItemDrop> OnItemDropInserted;
     public static event Action<ItemDrop> OnItemDropDeleted;
 
@@ -155,6 +156,7 @@ public class SpacetimeDBManager : MonoBehaviour
         Conn.Db.Inventory.OnDelete += (eventCtx, inv) => OnInventoryDeleted?.Invoke(inv);
         Conn.Db.Equipment.OnInsert += (eventCtx, eq) => OnEquipmentInserted?.Invoke(eq);
         Conn.Db.Equipment.OnUpdate += (eventCtx, oldEq, newEq) => OnEquipmentUpdated?.Invoke(oldEq, newEq);
+        Conn.Db.Equipment.OnDelete += (eventCtx, eq) => OnEquipmentDeleted?.Invoke(eq);
         Conn.Db.ItemDrop.OnInsert += (eventCtx, drop) => OnItemDropInserted?.Invoke(drop);
         Conn.Db.ItemDrop.OnDelete += (eventCtx, drop) => OnItemDropDeleted?.Invoke(drop);
 
