@@ -145,6 +145,11 @@ public class EquipmentUI : MonoBehaviour
             slot.style.backgroundColor = new StyleColor(GetRarityColor(def.Rarity));
             label.text = def.Name.Length > 10 ? def.Name.Substring(0, 10) + "…" : def.Name;
         }
+        else
+        {
+            slot.style.backgroundColor = new StyleColor(new Color(0.2f, 0.2f, 0.25f));
+            label.text = "?";
+        }
     }
 
     void TryUnequip(string slot)
