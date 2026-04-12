@@ -38,6 +38,16 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<Portal> OnPortalDeleted;
     public static event Action<ulong> OnZoneChanged; // fired with OLD zone id
 
+    public static event Action<ItemDefinition> OnItemDefInserted;
+    public static event Action<ItemDefinition> OnItemDefDeleted;
+    public static event Action<Inventory> OnInventoryInserted;
+    public static event Action<Inventory, Inventory> OnInventoryUpdated;
+    public static event Action<Inventory> OnInventoryDeleted;
+    public static event Action<Equipment> OnEquipmentInserted;
+    public static event Action<Equipment, Equipment> OnEquipmentUpdated;
+    public static event Action<ItemDrop> OnItemDropInserted;
+    public static event Action<ItemDrop> OnItemDropDeleted;
+
     [SerializeField] private string serverUri = "http://localhost:3000";
     [SerializeField] private string databaseName = "zoneforge-server";
 
@@ -100,6 +110,11 @@ public class SpacetimeDBManager : MonoBehaviour
                 $"SELECT * FROM enemy WHERE zone_id = {CurrentZoneId}",
                 $"SELECT * FROM portal WHERE source_zone_id = {CurrentZoneId}",
                 $"SELECT * FROM portal WHERE dest_zone_id = {CurrentZoneId}",
+                // Inventory and item tables
+                "SELECT * FROM item_def",
+                "SELECT * FROM inventory",
+                "SELECT * FROM equipment",
+                $"SELECT * FROM item_drop WHERE zone_id = {CurrentZoneId}",
             });
     }
 
@@ -132,6 +147,16 @@ public class SpacetimeDBManager : MonoBehaviour
 
         Conn.Db.Portal.OnInsert += (eventCtx, portal) => OnPortalInserted?.Invoke(portal);
         Conn.Db.Portal.OnDelete += (eventCtx, portal) => OnPortalDeleted?.Invoke(portal);
+
+        Conn.Db.ItemDef.OnInsert += (eventCtx, def) => OnItemDefInserted?.Invoke(def);
+        Conn.Db.ItemDef.OnDelete += (eventCtx, def) => OnItemDefDeleted?.Invoke(def);
+        Conn.Db.Inventory.OnInsert += (eventCtx, inv) => OnInventoryInserted?.Invoke(inv);
+        Conn.Db.Inventory.OnUpdate += (eventCtx, oldInv, newInv) => OnInventoryUpdated?.Invoke(oldInv, newInv);
+        Conn.Db.Inventory.OnDelete += (eventCtx, inv) => OnInventoryDeleted?.Invoke(inv);
+        Conn.Db.Equipment.OnInsert += (eventCtx, eq) => OnEquipmentInserted?.Invoke(eq);
+        Conn.Db.Equipment.OnUpdate += (eventCtx, oldEq, newEq) => OnEquipmentUpdated?.Invoke(oldEq, newEq);
+        Conn.Db.ItemDrop.OnInsert += (eventCtx, drop) => OnItemDropInserted?.Invoke(drop);
+        Conn.Db.ItemDrop.OnDelete += (eventCtx, drop) => OnItemDropDeleted?.Invoke(drop);
 
         IsSubscribed = true;
         OnConnected?.Invoke();
