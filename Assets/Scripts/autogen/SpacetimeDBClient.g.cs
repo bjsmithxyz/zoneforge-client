@@ -33,6 +33,11 @@ namespace SpacetimeDB.Types
             AddTable(Enemy = new(conn));
             AddTable(EnemyDef = new(conn));
             AddTable(EntityInstance = new(conn));
+            AddTable(Equipment = new(conn));
+            AddTable(Inventory = new(conn));
+            AddTable(ItemDef = new(conn));
+            AddTable(ItemDrop = new(conn));
+            AddTable(LootTable = new(conn));
             AddTable(Player = new(conn));
             AddTable(PlayerCooldown = new(conn));
             AddTable(Portal = new(conn));
@@ -542,6 +547,11 @@ namespace SpacetimeDB.Types
             new QueryBuilder().From.Enemy().ToSql(),
             new QueryBuilder().From.EnemyDef().ToSql(),
             new QueryBuilder().From.EntityInstance().ToSql(),
+            new QueryBuilder().From.Equipment().ToSql(),
+            new QueryBuilder().From.Inventory().ToSql(),
+            new QueryBuilder().From.ItemDef().ToSql(),
+            new QueryBuilder().From.ItemDrop().ToSql(),
+            new QueryBuilder().From.LootTable().ToSql(),
             new QueryBuilder().From.Player().ToSql(),
             new QueryBuilder().From.PlayerCooldown().ToSql(),
             new QueryBuilder().From.Portal().ToSql(),
@@ -561,6 +571,11 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Table<Enemy, EnemyCols, EnemyIxCols> Enemy() => new("enemy", new EnemyCols("enemy"), new EnemyIxCols("enemy"));
         public global::SpacetimeDB.Table<EnemyDefinition, EnemyDefCols, EnemyDefIxCols> EnemyDef() => new("enemy_def", new EnemyDefCols("enemy_def"), new EnemyDefIxCols("enemy_def"));
         public global::SpacetimeDB.Table<EntityInstance, EntityInstanceCols, EntityInstanceIxCols> EntityInstance() => new("entity_instance", new EntityInstanceCols("entity_instance"), new EntityInstanceIxCols("entity_instance"));
+        public global::SpacetimeDB.Table<Equipment, EquipmentCols, EquipmentIxCols> Equipment() => new("equipment", new EquipmentCols("equipment"), new EquipmentIxCols("equipment"));
+        public global::SpacetimeDB.Table<Inventory, InventoryCols, InventoryIxCols> Inventory() => new("inventory", new InventoryCols("inventory"), new InventoryIxCols("inventory"));
+        public global::SpacetimeDB.Table<ItemDefinition, ItemDefCols, ItemDefIxCols> ItemDef() => new("item_def", new ItemDefCols("item_def"), new ItemDefIxCols("item_def"));
+        public global::SpacetimeDB.Table<ItemDrop, ItemDropCols, ItemDropIxCols> ItemDrop() => new("item_drop", new ItemDropCols("item_drop"), new ItemDropIxCols("item_drop"));
+        public global::SpacetimeDB.Table<LootTable, LootTableCols, LootTableIxCols> LootTable() => new("loot_table", new LootTableCols("loot_table"), new LootTableIxCols("loot_table"));
         public global::SpacetimeDB.Table<Player, PlayerCols, PlayerIxCols> Player() => new("player", new PlayerCols("player"), new PlayerIxCols("player"));
         public global::SpacetimeDB.Table<PlayerCooldown, PlayerCooldownCols, PlayerCooldownIxCols> PlayerCooldown() => new("player_cooldown", new PlayerCooldownCols("player_cooldown"), new PlayerCooldownIxCols("player_cooldown"));
         public global::SpacetimeDB.Table<Portal, PortalCols, PortalIxCols> Portal() => new("portal", new PortalCols("portal"), new PortalIxCols("portal"));
@@ -651,19 +666,27 @@ namespace SpacetimeDB.Types
             {
                 Reducer.AttackEnemy args => Reducers.InvokeAttackEnemy(eventContext, args),
                 Reducer.CreateEnemyDef args => Reducers.InvokeCreateEnemyDef(eventContext, args),
+                Reducer.CreateItemDef args => Reducers.InvokeCreateItemDef(eventContext, args),
+                Reducer.CreateLootTable args => Reducers.InvokeCreateLootTable(eventContext, args),
                 Reducer.CreatePlayer args => Reducers.InvokeCreatePlayer(eventContext, args),
                 Reducer.CreatePortal args => Reducers.InvokeCreatePortal(eventContext, args),
                 Reducer.CreateSpawnPoint args => Reducers.InvokeCreateSpawnPoint(eventContext, args),
                 Reducer.CreateZone args => Reducers.InvokeCreateZone(eventContext, args),
                 Reducer.DeleteEnemyDef args => Reducers.InvokeDeleteEnemyDef(eventContext, args),
+                Reducer.DeleteItemDef args => Reducers.InvokeDeleteItemDef(eventContext, args),
+                Reducer.DeleteLootTable args => Reducers.InvokeDeleteLootTable(eventContext, args),
                 Reducer.DeletePortal args => Reducers.InvokeDeletePortal(eventContext, args),
                 Reducer.DeleteSpawnPoint args => Reducers.InvokeDeleteSpawnPoint(eventContext, args),
                 Reducer.DespawnEnemy args => Reducers.InvokeDespawnEnemy(eventContext, args),
                 Reducer.EnterZone args => Reducers.InvokeEnterZone(eventContext, args),
+                Reducer.EquipItem args => Reducers.InvokeEquipItem(eventContext, args),
+                Reducer.GiveItem args => Reducers.InvokeGiveItem(eventContext, args),
                 Reducer.MovePlayer args => Reducers.InvokeMovePlayer(eventContext, args),
+                Reducer.PickupItem args => Reducers.InvokePickupItem(eventContext, args),
                 Reducer.Respawn args => Reducers.InvokeRespawn(eventContext, args),
                 Reducer.SpawnEnemyManual args => Reducers.InvokeSpawnEnemyManual(eventContext, args),
                 Reducer.SpawnEntity args => Reducers.InvokeSpawnEntity(eventContext, args),
+                Reducer.UnequipItem args => Reducers.InvokeUnequipItem(eventContext, args),
                 Reducer.UpdateAiState args => Reducers.InvokeUpdateAiState(eventContext, args),
                 Reducer.UpdateTerrainChunk args => Reducers.InvokeUpdateTerrainChunk(eventContext, args),
                 Reducer.UseAbility args => Reducers.InvokeUseAbility(eventContext, args),
