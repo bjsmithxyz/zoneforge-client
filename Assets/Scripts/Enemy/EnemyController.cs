@@ -17,7 +17,7 @@ public class EnemyController : MonoBehaviour
 
     public void Init(Enemy enemy)
     {
-        var pos = new Vector3(enemy.PositionX, 1f, enemy.PositionY);
+        var pos = new Vector3(enemy.PositionX, TerrainRenderer.GetSurfaceHeight(enemy.PositionX, enemy.PositionY) + 0.75f, enemy.PositionY);
         transform.position = pos;
         _targetPosition    = pos;
         _isDead            = enemy.IsDead;
@@ -32,7 +32,7 @@ public class EnemyController : MonoBehaviour
         }
 
         if (!_isDead)
-            _targetPosition = new Vector3(enemy.PositionX, 1f, enemy.PositionY);
+            _targetPosition = new Vector3(enemy.PositionX, TerrainRenderer.GetSurfaceHeight(enemy.PositionX, enemy.PositionY) + 0.75f, enemy.PositionY);
     }
 
     void Update()

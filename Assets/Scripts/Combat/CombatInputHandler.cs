@@ -176,7 +176,8 @@ public class CombatInputHandler : MonoBehaviour
         }
 
         var pos = targetGo.transform.position;
-        _selectionRing.transform.position = new Vector3(pos.x, 0.05f, pos.z);
+        float surfaceY = TerrainRenderer.GetSurfaceHeight(pos.x, pos.z);
+        _selectionRing.transform.position = new Vector3(pos.x, surfaceY + 0.05f, pos.z);
         _selectionRing.SetActive(true);
     }
 

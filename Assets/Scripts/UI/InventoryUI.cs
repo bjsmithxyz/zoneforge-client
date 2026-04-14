@@ -18,9 +18,6 @@ public class InventoryUI : MonoBehaviour
     private VisualElement _panel;
     private VisualElement _grid;
     private VisualElement _tooltip;
-    private Label         _tooltipName;
-    private Label         _tooltipDesc;
-    private Label         _tooltipStats;
 
     private const int SlotCount = 20;
     private readonly VisualElement[] _slots          = new VisualElement[SlotCount];
@@ -114,22 +111,9 @@ public class InventoryUI : MonoBehaviour
         _tooltip.style.paddingBottom = 6;
         _tooltip.style.paddingLeft   = 8;
         _tooltip.style.paddingRight  = 8;
-        _tooltip.style.minWidth      = 140;
-        _tooltip.style.maxWidth      = 220;
+        _tooltip.style.width         = 220;
         _tooltip.pickingMode         = PickingMode.Ignore;
         _tooltip.style.display       = DisplayStyle.None;
-
-        _tooltipName  = new Label();
-        _tooltipName.style.color                    = Color.white;
-        _tooltipName.style.unityFontStyleAndWeight  = FontStyle.Bold;
-        _tooltipDesc  = new Label();
-        _tooltipDesc.style.color      = new Color(0.8f, 0.8f, 0.8f);
-        _tooltipDesc.style.whiteSpace = WhiteSpace.Normal;
-        _tooltipStats = new Label();
-        _tooltipStats.style.color = new Color(0.5f, 0.9f, 0.5f);
-        _tooltip.Add(_tooltipName);
-        _tooltip.Add(_tooltipDesc);
-        _tooltip.Add(_tooltipStats);
 
         _root.Add(_panel);
         _root.Add(_tooltip);
@@ -312,10 +296,45 @@ public class InventoryUI : MonoBehaviour
         if (!InventoryManager.Instance.ItemDefs.TryGetValue(defId, out var def))
         { _tooltip.style.display = DisplayStyle.None; return; }
 
-        _tooltipName.text  = $"{def.Name}  [{def.Rarity}]";
-        _tooltipDesc.text  = def.Description;
-        _tooltipStats.text = BuildStatLine(def);
+        // Recreate labels each show — post-construction .text updates don't
+        // always trigger a repaint in runtime UIToolkit.
+        _tooltip.Clear();
+
+        string statLine = BuildStatLine(def);
+        string descText = string.IsNullOrEmpty(def.Description) ? "—" : def.Description;
+
+        var name = new Label($"{def.Name}  [{def.Rarity}]");
+        name.style.color                   = Color.white;
+        name.style.unityFontStyleAndWeight = FontStyle.Bold;
+        name.style.fontSize                = 13;
+        name.style.whiteSpace              = WhiteSpace.Normal;
+        _tooltip.Add(name);
+
+        var desc = new Label(descText);
+        desc.style.color      = new Color(0.8f, 0.8f, 0.8f);
+        desc.style.fontSize   = 11;
+        desc.style.whiteSpace = WhiteSpace.Normal;
+        desc.style.marginTop  = 2;
+        _tooltip.Add(desc);
+
+        if (!string.IsNullOrWhiteSpace(statLine))
+        {
+            var stats = new Label(statLine);
+            stats.style.color      = new Color(0.5f, 0.9f, 0.5f);
+            stats.style.fontSize   = 11;
+            stats.style.whiteSpace = WhiteSpace.Normal;
+            stats.style.marginTop  = 2;
+            _tooltip.Add(stats);
+        }
+
         _tooltip.style.display = DisplayStyle.Flex;
+
+        // Position LEFT of slot (panel is anchored to right edge of screen,
+        // so spawning right of slot would go off-screen).
+        var sb = slot.worldBound;
+        _tooltip.style.left = Mathf.Max(4f, sb.xMin - 228);
+        _tooltip.style.top  = sb.yMin;
+        _tooltip.BringToFront();
     }
 
     void PositionTooltip(Vector2 mousePos)

@@ -21,6 +21,7 @@ public class SpacetimeDBManager : MonoBehaviour
     public static event Action<Zone, Zone> OnZoneUpdated;
     public static event Action<Zone> OnZoneDeleted;
     public static event Action<EntityInstance> OnEntityInserted;
+    public static event Action<EntityInstance> OnEntityDeleted;
     public static event Action<Player> OnPlayerInserted;
     public static event Action<Player, Player> OnPlayerUpdated;
     public static event Action<Player> OnPlayerDeleted;
@@ -128,6 +129,7 @@ public class SpacetimeDBManager : MonoBehaviour
         Conn.Db.Zone.OnDelete += (eventCtx, zone) => OnZoneDeleted?.Invoke(zone);
 
         Conn.Db.EntityInstance.OnInsert += (eventCtx, entity) => OnEntityInserted?.Invoke(entity);
+        Conn.Db.EntityInstance.OnDelete += (eventCtx, entity) => OnEntityDeleted?.Invoke(entity);
 
         Conn.Db.Player.OnInsert += (eventCtx, player) => OnPlayerInserted?.Invoke(player);
         Conn.Db.Player.OnUpdate += (eventCtx, oldPlayer, newPlayer) => OnPlayerUpdated?.Invoke(oldPlayer, newPlayer);

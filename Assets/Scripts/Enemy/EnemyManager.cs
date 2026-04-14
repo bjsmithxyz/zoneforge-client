@@ -80,6 +80,7 @@ public class EnemyManager : MonoBehaviour
 
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         go.name = $"Enemy_{enemy.Id}_{def?.Name ?? "Unknown"}";
+        go.transform.localScale = new Vector3(0.7f, 0.75f, 0.7f);
 
         var rend = go.GetComponent<Renderer>();
         var mat  = new Material(Shader.Find("Universal Render Pipeline/Lit"));

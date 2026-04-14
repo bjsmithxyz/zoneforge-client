@@ -29,7 +29,7 @@ public class ItemPickupManager : MonoBehaviour
         _promptVisible = false;
         _nearestDropId = 0;
 
-        if (!SpacetimeDBManager.IsSubscribed || InventoryManager.Instance == null) return;
+        if (!SpacetimeDBManager.IsSubscribed) return;
 
         // Find local player position
         Vector3 playerPos = Vector3.zero;
@@ -46,20 +46,22 @@ public class ItemPickupManager : MonoBehaviour
         if (!foundPlayer) return;
 
         float bestDistSq = PickupRadius * PickupRadius;
-        foreach (var kv in InventoryManager.Instance.ItemDrops)
+        foreach (var drop in SpacetimeDBManager.Conn.Db.ItemDrop.Iter())
         {
-            var drop = kv.Value;
             var dropPos = new Vector3(drop.PosX, 0, drop.PosY);
             float distSq = (playerPos - dropPos).sqrMagnitude;
             if (distSq < bestDistSq)
             {
                 bestDistSq     = distSq;
                 _nearestDropId = drop.Id;
-                InventoryManager.Instance.ItemDefs.TryGetValue(drop.ItemDefId, out var def);
-                _nearestDropName = def != null
-                    ? $"{def.Name} x{drop.Quantity}"
-                    : $"Item x{drop.Quantity}";
-                _promptVisible = true;
+
+                string itemName = "Item";
+                foreach (var def in SpacetimeDBManager.Conn.Db.ItemDef.Iter())
+                {
+                    if (def.Id == drop.ItemDefId) { itemName = def.Name; break; }
+                }
+                _nearestDropName = $"{itemName} x{drop.Quantity}";
+                _promptVisible   = true;
             }
         }
 
@@ -80,7 +82,7 @@ public class ItemPickupManager : MonoBehaviour
         };
         style.normal.textColor = Color.white;
         float w = 280, h = 32;
-        GUI.Box(new Rect(Screen.width / 2f - w / 2f, Screen.height - 80, w, h),
+        GUI.Box(new Rect(Screen.width / 2f - w / 2f, 24, w, h),
             $"F — Pick Up {_nearestDropName}", style);
     }
 }
