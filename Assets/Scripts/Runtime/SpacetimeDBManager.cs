@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using SpacetimeDB;
 using SpacetimeDB.Types;
+using ZoneForge.Runtime;
 
 public class SpacetimeDBManager : MonoBehaviour
 {
@@ -117,6 +118,9 @@ public class SpacetimeDBManager : MonoBehaviour
                 "SELECT * FROM inventory",
                 "SELECT * FROM equipment",
                 $"SELECT * FROM item_drop WHERE zone_id = {CurrentZoneId}",
+                // Atmosphere tables
+                "SELECT * FROM world_clock",
+                $"SELECT * FROM weather_state WHERE zone_id = {CurrentZoneId}",
             });
     }
 
@@ -162,8 +166,43 @@ public class SpacetimeDBManager : MonoBehaviour
         Conn.Db.ItemDrop.OnInsert += (eventCtx, drop) => OnItemDropInserted?.Invoke(drop);
         Conn.Db.ItemDrop.OnDelete += (eventCtx, drop) => OnItemDropDeleted?.Invoke(drop);
 
+        Conn.Db.WorldClock.OnInsert += (eventCtx, row) => UpdateAtmosphereClock(row);
+        Conn.Db.WorldClock.OnUpdate += (eventCtx, oldRow, newRow) => UpdateAtmosphereClock(newRow);
+        Conn.Db.WeatherState.OnInsert += (eventCtx, row) => UpdateAtmosphereWeather(row);
+        Conn.Db.WeatherState.OnUpdate += (eventCtx, oldRow, newRow) => UpdateAtmosphereWeather(newRow);
+        Conn.Db.Zone.OnUpdate += (eventCtx, oldZone, newZone) =>
+        {
+            var controller = FindObjectOfType<AtmosphereController>();
+            if (controller != null && controller.CurrentZoneId == newZone.Id)
+            {
+                controller.SetZone(newZone.Id, newZone.MoodPresetId);
+            }
+        };
+
+        // Prime the atmosphere on initial subscription
+        var currentZone = Conn.Db.Zone.Id.Find(CurrentZoneId);
+        if (currentZone != null)
+        {
+            var controller = FindObjectOfType<AtmosphereController>();
+            controller?.SetZone(currentZone.Id, currentZone.MoodPresetId);
+        }
+
         IsSubscribed = true;
         OnConnected?.Invoke();
+    }
+
+    private static void UpdateAtmosphereClock(WorldClock row)
+    {
+        var controller = FindObjectOfType<AtmosphereController>();
+        if (controller != null) controller.OnWorldClockChanged(row.MinutesOfDay);
+    }
+
+    private static void UpdateAtmosphereWeather(WeatherState row)
+    {
+        var controller = FindObjectOfType<AtmosphereController>();
+        if (controller == null) return;
+        if (controller.CurrentZoneId != row.ZoneId) return;
+        controller.OnWeatherChanged(row.Kind, row.Intensity);
     }
 
     void OnConnectError(Exception e)
