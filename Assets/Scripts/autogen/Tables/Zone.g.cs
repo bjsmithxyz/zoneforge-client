@@ -44,6 +44,7 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Col<Zone, uint> TerrainWidth { get; }
         public global::SpacetimeDB.Col<Zone, uint> TerrainHeight { get; }
         public global::SpacetimeDB.Col<Zone, float> WaterLevel { get; }
+        public global::SpacetimeDB.Col<Zone, uint> MoodPresetId { get; }
 
         public ZoneCols(string tableName)
         {
@@ -52,6 +53,7 @@ namespace SpacetimeDB.Types
             TerrainWidth = new global::SpacetimeDB.Col<Zone, uint>(tableName, "terrain_width");
             TerrainHeight = new global::SpacetimeDB.Col<Zone, uint>(tableName, "terrain_height");
             WaterLevel = new global::SpacetimeDB.Col<Zone, float>(tableName, "water_level");
+            MoodPresetId = new global::SpacetimeDB.Col<Zone, uint>(tableName, "mood_preset_id");
         }
     }
 

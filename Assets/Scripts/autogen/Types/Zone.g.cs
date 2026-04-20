@@ -23,13 +23,16 @@ namespace SpacetimeDB.Types
         public uint TerrainHeight;
         [DataMember(Name = "water_level")]
         public float WaterLevel;
+        [DataMember(Name = "mood_preset_id")]
+        public uint MoodPresetId;
 
         public Zone(
             ulong Id,
             string Name,
             uint TerrainWidth,
             uint TerrainHeight,
-            float WaterLevel
+            float WaterLevel,
+            uint MoodPresetId
         )
         {
             this.Id = Id;
@@ -37,6 +40,7 @@ namespace SpacetimeDB.Types
             this.TerrainWidth = TerrainWidth;
             this.TerrainHeight = TerrainHeight;
             this.WaterLevel = WaterLevel;
+            this.MoodPresetId = MoodPresetId;
         }
 
         public Zone()

@@ -44,6 +44,8 @@ namespace SpacetimeDB.Types
             AddTable(SpawnPoint = new(conn));
             AddTable(StatusEffect = new(conn));
             AddTable(TerrainChunk = new(conn));
+            AddTable(WeatherState = new(conn));
+            AddTable(WorldClock = new(conn));
             AddTable(Zone = new(conn));
         }
     }
@@ -558,6 +560,8 @@ namespace SpacetimeDB.Types
             new QueryBuilder().From.SpawnPoint().ToSql(),
             new QueryBuilder().From.StatusEffect().ToSql(),
             new QueryBuilder().From.TerrainChunk().ToSql(),
+            new QueryBuilder().From.WeatherState().ToSql(),
+            new QueryBuilder().From.WorldClock().ToSql(),
             new QueryBuilder().From.Zone().ToSql(),
         }
         ;
@@ -582,6 +586,8 @@ namespace SpacetimeDB.Types
         public global::SpacetimeDB.Table<SpawnPoint, SpawnPointCols, SpawnPointIxCols> SpawnPoint() => new("spawn_point", new SpawnPointCols("spawn_point"), new SpawnPointIxCols("spawn_point"));
         public global::SpacetimeDB.Table<StatusEffect, StatusEffectCols, StatusEffectIxCols> StatusEffect() => new("status_effect", new StatusEffectCols("status_effect"), new StatusEffectIxCols("status_effect"));
         public global::SpacetimeDB.Table<TerrainChunk, TerrainChunkCols, TerrainChunkIxCols> TerrainChunk() => new("terrain_chunk", new TerrainChunkCols("terrain_chunk"), new TerrainChunkIxCols("terrain_chunk"));
+        public global::SpacetimeDB.Table<WeatherState, WeatherStateCols, WeatherStateIxCols> WeatherState() => new("weather_state", new WeatherStateCols("weather_state"), new WeatherStateIxCols("weather_state"));
+        public global::SpacetimeDB.Table<WorldClock, WorldClockCols, WorldClockIxCols> WorldClock() => new("world_clock", new WorldClockCols("world_clock"), new WorldClockIxCols("world_clock"));
         public global::SpacetimeDB.Table<Zone, ZoneCols, ZoneIxCols> Zone() => new("zone", new ZoneCols("zone"), new ZoneIxCols("zone"));
     }
 
@@ -665,6 +671,7 @@ namespace SpacetimeDB.Types
             return reducer switch
             {
                 Reducer.AttackEnemy args => Reducers.InvokeAttackEnemy(eventContext, args),
+                Reducer.ChangeWeather args => Reducers.InvokeChangeWeather(eventContext, args),
                 Reducer.CreateEnemyDef args => Reducers.InvokeCreateEnemyDef(eventContext, args),
                 Reducer.CreateItemDef args => Reducers.InvokeCreateItemDef(eventContext, args),
                 Reducer.CreateLootTable args => Reducers.InvokeCreateLootTable(eventContext, args),
@@ -684,6 +691,7 @@ namespace SpacetimeDB.Types
                 Reducer.MovePlayer args => Reducers.InvokeMovePlayer(eventContext, args),
                 Reducer.PickupItem args => Reducers.InvokePickupItem(eventContext, args),
                 Reducer.Respawn args => Reducers.InvokeRespawn(eventContext, args),
+                Reducer.SetZoneMood args => Reducers.InvokeSetZoneMood(eventContext, args),
                 Reducer.SpawnEnemyManual args => Reducers.InvokeSpawnEnemyManual(eventContext, args),
                 Reducer.SpawnEntity args => Reducers.InvokeSpawnEntity(eventContext, args),
                 Reducer.UnequipItem args => Reducers.InvokeUnequipItem(eventContext, args),
