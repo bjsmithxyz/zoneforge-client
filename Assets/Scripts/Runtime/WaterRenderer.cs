@@ -43,14 +43,9 @@ public class WaterRenderer : MonoBehaviour
             return;
         }
 
-        foreach (var zone in SpacetimeDBManager.Conn.Db.Zone.Iter())
-        {
-            if (zone.Id != SpacetimeDBManager.CurrentZoneId) continue;
-            BuildWaterMesh(zone.TerrainWidth, zone.TerrainHeight, zone.WaterLevel);
-            return;
-        }
-
-        gameObject.SetActive(false);
+        var zone = SpacetimeDBManager.Conn.Db.Zone.Id.Find(SpacetimeDBManager.CurrentZoneId);
+        if (zone == null) { gameObject.SetActive(false); return; }
+        BuildWaterMesh(zone.TerrainWidth, zone.TerrainHeight, zone.WaterLevel);
     }
 
     void BuildWaterMesh(uint width, uint height, float waterLevel)

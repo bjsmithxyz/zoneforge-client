@@ -52,8 +52,8 @@ public class HotbarUI : MonoBehaviour
 
     void OnConnected()
     {
-        // Backfill: initial Ability rows don't fire OnInsert (arrives before callback registration)
-        foreach (var a in SpacetimeDBManager.Conn.Db.Ability.Iter())
+        // Backfill from cache (LookupCache has already populated Abilities at this point).
+        foreach (var a in LookupCache.Abilities.Values)
             OnAbilityRow(a);
 
         ResolveLocalPlayerId();
@@ -105,10 +105,9 @@ public class HotbarUI : MonoBehaviour
             float  fill      = 0f;
             string timerText = "";
 
-            foreach (var cd in SpacetimeDBManager.Conn.Db.PlayerCooldown.Iter())
+            // O(1) cache lookup instead of full PlayerCooldown table scan per slot per frame.
+            if (LookupCache.Cooldowns.TryGetValue((_localPlayerId, _slots[i].AbilityId), out var cd))
             {
-                if (cd.PlayerId != _localPlayerId || cd.AbilityId != _slots[i].AbilityId) continue;
-
                 long remainUs = (long)cd.ReadyAt.MicrosecondsSinceUnixEpoch - nowUs;
                 if (remainUs > 0 && _slots[i].CooldownTotalMs > 0)
                 {
@@ -117,7 +116,6 @@ public class HotbarUI : MonoBehaviour
                     float sec = remainUs / 1_000_000f;
                     timerText = sec >= 1f ? $"{sec:F0}" : $"{sec:F1}";
                 }
-                break;
             }
 
             _slots[i].CooldownOverlay.fillAmount = fill;

@@ -54,6 +54,15 @@ public class SpacetimeDBManager : MonoBehaviour
     [SerializeField] private string serverUri = "http://localhost:3000";
     [SerializeField] private string databaseName = "zoneforge-server";
 
+    // Cached on subscription so per-frame/per-event callbacks don't FindObjectOfType.
+    private static AtmosphereController _cachedAtmosphere;
+    private static AtmosphereController GetAtmosphere()
+    {
+        if (_cachedAtmosphere == null)
+            _cachedAtmosphere = FindObjectOfType<AtmosphereController>();
+        return _cachedAtmosphere;
+    }
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -128,6 +137,10 @@ public class SpacetimeDBManager : MonoBehaviour
     {
         Debug.Log("[SpacetimeDBManager] Subscription applied");
 
+        // Populate hot-lookup caches (Ability/EnemyDef/ItemDef/PlayerCooldown).
+        LookupCache.Clear();
+        LookupCache.HookCallbacks(Conn.Db);
+
         Conn.Db.Zone.OnInsert += (eventCtx, zone) => OnZoneInserted?.Invoke(zone);
         Conn.Db.Zone.OnUpdate += (eventCtx, oldZone, newZone) => OnZoneUpdated?.Invoke(oldZone, newZone);
         Conn.Db.Zone.OnDelete += (eventCtx, zone) => OnZoneDeleted?.Invoke(zone);
@@ -172,7 +185,7 @@ public class SpacetimeDBManager : MonoBehaviour
         Conn.Db.WeatherState.OnUpdate += (eventCtx, oldRow, newRow) => UpdateAtmosphereWeather(newRow);
         Conn.Db.Zone.OnUpdate += (eventCtx, oldZone, newZone) =>
         {
-            var controller = FindObjectOfType<AtmosphereController>();
+            var controller = GetAtmosphere();
             if (controller != null && controller.CurrentZoneId == newZone.Id)
             {
                 controller.SetZone(newZone.Id, newZone.MoodPresetId);
@@ -183,8 +196,7 @@ public class SpacetimeDBManager : MonoBehaviour
         var currentZone = Conn.Db.Zone.Id.Find(CurrentZoneId);
         if (currentZone != null)
         {
-            var controller = FindObjectOfType<AtmosphereController>();
-            controller?.SetZone(currentZone.Id, currentZone.MoodPresetId);
+            GetAtmosphere()?.SetZone(currentZone.Id, currentZone.MoodPresetId);
         }
 
         IsSubscribed = true;
@@ -193,13 +205,13 @@ public class SpacetimeDBManager : MonoBehaviour
 
     private static void UpdateAtmosphereClock(WorldClock row)
     {
-        var controller = FindObjectOfType<AtmosphereController>();
+        var controller = GetAtmosphere();
         if (controller != null) controller.OnWorldClockChanged(row.MinutesOfDay);
     }
 
     private static void UpdateAtmosphereWeather(WeatherState row)
     {
-        var controller = FindObjectOfType<AtmosphereController>();
+        var controller = GetAtmosphere();
         if (controller == null) return;
         if (controller.CurrentZoneId != row.ZoneId) return;
         controller.OnWeatherChanged(row.Kind, row.Intensity);
@@ -216,6 +228,7 @@ public class SpacetimeDBManager : MonoBehaviour
         if (conn != Conn) return;
         LocalIdentity = default;
         IsSubscribed = false;
+        LookupCache.Clear();
         if (e != null)
             Debug.LogWarning($"[SpacetimeDBManager] Disconnected with error: {e.Message}");
         else

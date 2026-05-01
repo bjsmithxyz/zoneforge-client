@@ -59,15 +59,10 @@ public class CombatManager : MonoBehaviour
     {
         if (SpacetimeDBManager.Conn == null) return;
 
-        // Look up the ability — ability_id 0 means DoT tick (no ability row)
+        // Look up the ability via cache — ability_id 0 means DoT tick (no ability row)
         Ability ability = null;
         if (log.AbilityId != 0)
-        {
-            foreach (var a in SpacetimeDBManager.Conn.Db.Ability.Iter())
-            {
-                if (a.Id == log.AbilityId) { ability = a; break; }
-            }
-        }
+            LookupCache.Abilities.TryGetValue(log.AbilityId, out ability);
 
         // Determine attacker position — check enemies first, then players
         Vector3 attackerPos = default;

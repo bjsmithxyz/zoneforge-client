@@ -29,6 +29,15 @@ public class TerrainRenderer : MonoBehaviour
 
     // chunk cache: (cx, cz) → last received TerrainChunk
     private readonly Dictionary<(int, int), TerrainChunk> _chunks = new();
+    // Pre-decoded byte arrays (List<byte>.ToArray() is expensive; cache once per chunk update).
+    private readonly Dictionary<(int, int), byte[]> _heightArrays = new();
+    private readonly Dictionary<(int, int), byte[]> _splatArrays  = new();
+
+    // Persistent mesh buffers — reused across patches to avoid per-update array allocation.
+    private Vector3[] _vertices;
+    private Vector2[] _uv0;
+    private Vector2[] _uv1;
+    private int[]     _triangles;
 
     // single full-terrain splatmap texture (rebuilt when zone changes)
     private Texture2D _splatTexture;
@@ -97,6 +106,8 @@ public class TerrainRenderer : MonoBehaviour
     void OnActiveZoneChanged(ulong _)
     {
         _chunks.Clear();
+        _heightArrays.Clear();
+        _splatArrays.Clear();
         ClearSplatTexture();
         RebuildFromActiveZone();
     }
@@ -104,7 +115,10 @@ public class TerrainRenderer : MonoBehaviour
     void OnChunkUpdated(TerrainChunk chunk)
     {
         if (chunk.ZoneId != SpacetimeDBManager.CurrentZoneId) return;
-        _chunks[((int)chunk.ChunkX, (int)chunk.ChunkZ)] = chunk;
+        var key = ((int)chunk.ChunkX, (int)chunk.ChunkZ);
+        _chunks[key]       = chunk;
+        _heightArrays[key] = chunk.HeightData.ToArray();
+        _splatArrays[key]  = chunk.SplatData.ToArray();
         PatchChunk(chunk);
     }
 
@@ -114,25 +128,22 @@ public class TerrainRenderer : MonoBehaviour
     {
         if (SpacetimeDBManager.Conn == null || SpacetimeDBManager.CurrentZoneId == 0) return;
 
-        _terrainWidth  = 0;
-        _terrainHeight = 0;
-
-        foreach (var zone in SpacetimeDBManager.Conn.Db.Zone.Iter())
-        {
-            if (zone.Id != SpacetimeDBManager.CurrentZoneId) continue;
-            _terrainWidth  = (int)zone.TerrainWidth;
-            _terrainHeight = (int)zone.TerrainHeight;
-            break;
-        }
-
-        if (_terrainWidth == 0) return;
+        var activeZone = SpacetimeDBManager.Conn.Db.Zone.Id.Find(SpacetimeDBManager.CurrentZoneId);
+        if (activeZone == null) { _terrainWidth = _terrainHeight = 0; return; }
+        _terrainWidth  = (int)activeZone.TerrainWidth;
+        _terrainHeight = (int)activeZone.TerrainHeight;
 
         // Cache all chunks for this zone.
         _chunks.Clear();
+        _heightArrays.Clear();
+        _splatArrays.Clear();
         foreach (var chunk in SpacetimeDBManager.Conn.Db.TerrainChunk.Iter())
         {
             if (chunk.ZoneId != SpacetimeDBManager.CurrentZoneId) continue;
-            _chunks[((int)chunk.ChunkX, (int)chunk.ChunkZ)] = chunk;
+            var key = ((int)chunk.ChunkX, (int)chunk.ChunkZ);
+            _chunks[key]       = chunk;
+            _heightArrays[key] = chunk.HeightData.ToArray();
+            _splatArrays[key]  = chunk.SplatData.ToArray();
         }
 
         BuildFullMesh();
@@ -145,47 +156,51 @@ public class TerrainRenderer : MonoBehaviour
     {
         int w = _terrainWidth;
         int h = _terrainHeight;
+        int vertCount = w * h;
+        int quadCount = (w - 1) * (h - 1);
+        int triCount  = quadCount * 6;
 
-        // Vertices: one per sample point
-        var vertices = new Vector3[w * h];
-        var uv0      = new Vector2[w * h]; // world XZ (passed to shader as worldXZ)
-        var uv1      = new Vector2[w * h]; // normalised terrain UV for splatmap
+        // Reuse persistent buffers across rebuilds. Only realloc on size change.
+        if (_vertices == null || _vertices.Length != vertCount)
+        {
+            _vertices = new Vector3[vertCount];
+            _uv0      = new Vector2[vertCount];
+            _uv1      = new Vector2[vertCount];
+        }
+        if (_triangles == null || _triangles.Length != triCount)
+            _triangles = new int[triCount];
 
         for (int z = 0; z < h; z++)
         for (int x = 0; x < w; x++)
         {
             int vi = z * w + x;
             float height = SampleHeight(x, z);
-            vertices[vi] = new Vector3(x, height, z);
-            uv0[vi]      = new Vector2(x, z);
-            uv1[vi]      = new Vector2((float)x / w, (float)z / h);
+            _vertices[vi] = new Vector3(x, height, z);
+            _uv0[vi]      = new Vector2(x, z);
+            _uv1[vi]      = new Vector2((float)x / w, (float)z / h);
         }
 
-        // Triangles: 2 per quad
-        int quadCount = (w - 1) * (h - 1);
-        var triangles = new int[quadCount * 6];
         int t = 0;
         for (int z = 0; z < h - 1; z++)
         for (int x = 0; x < w - 1; x++)
         {
             int vi = z * w + x;
-            triangles[t++] = vi;
-            triangles[t++] = vi + w;
-            triangles[t++] = vi + 1;
-            triangles[t++] = vi + 1;
-            triangles[t++] = vi + w;
-            triangles[t++] = vi + w + 1;
+            _triangles[t++] = vi;
+            _triangles[t++] = vi + w;
+            _triangles[t++] = vi + 1;
+            _triangles[t++] = vi + 1;
+            _triangles[t++] = vi + w;
+            _triangles[t++] = vi + w + 1;
         }
 
         _mesh.Clear();
-        _mesh.vertices  = vertices;
-        _mesh.uv        = uv0;
-        _mesh.uv2       = uv1;
-        _mesh.triangles = triangles;
+        _mesh.vertices  = _vertices;
+        _mesh.uv        = _uv0;
+        _mesh.uv2       = _uv1;
+        _mesh.triangles = _triangles;
         _mesh.RecalculateNormals();
         _mesh.RecalculateBounds();
 
-        // Build combined splatmap texture (full terrain, one RGBA texture).
         BuildSplatTexture();
 
         _renderer.sharedMaterial = _terrainMaterial;
@@ -199,14 +214,13 @@ public class TerrainRenderer : MonoBehaviour
             out int cx, out int cz);
         int idx = TerrainChunkData.WorldToLocalIndex(gx, gz, TerrainChunkData.ChunkSize);
 
-        if (_chunks.TryGetValue((cx, cz), out var chunk))
-            return TerrainChunkData.GetHeight(chunk.HeightData.ToArray(), idx);
+        if (_heightArrays.TryGetValue((cx, cz), out var heights))
+            return TerrainChunkData.GetHeight(heights, idx);
         return 0f;
     }
 
     void BuildSplatTexture()
     {
-        // Reuse or create the full-terrain RGBA texture.
         if (_splatTexture == null ||
             _splatTexture.width != _terrainWidth ||
             _splatTexture.height != _terrainHeight)
@@ -225,12 +239,12 @@ public class TerrainRenderer : MonoBehaviour
             int idx = TerrainChunkData.WorldToLocalIndex(x, z, TerrainChunkData.ChunkSize);
 
             byte r = 255, g = 0, b = 0, a = 0;
-            if (_chunks.TryGetValue((cx, cz), out var chunk))
+            if (_splatArrays.TryGetValue((cx, cz), out var splat))
             {
-                r = chunk.SplatData[idx * 4];
-                g = chunk.SplatData[idx * 4 + 1];
-                b = chunk.SplatData[idx * 4 + 2];
-                a = chunk.SplatData[idx * 4 + 3];
+                r = splat[idx * 4];
+                g = splat[idx * 4 + 1];
+                b = splat[idx * 4 + 2];
+                a = splat[idx * 4 + 3];
             }
             pixels[z * _terrainWidth + x] = new Color32(r, g, b, a);
         }
@@ -241,13 +255,57 @@ public class TerrainRenderer : MonoBehaviour
         _terrainMaterial.SetTexture("_SplatTex", _splatTexture);
     }
 
-    /// <summary>Patch only the vertices and splat pixels affected by a single chunk update.</summary>
+    /// <summary>
+    /// Incremental patch: only re-samples vertices in the updated chunk's region
+    /// (plus a +1 sample-point overlap to update the shared edge with neighbour chunks),
+    /// and writes only that chunk's pixels into the splatmap texture region.
+    /// Falls back to a full rebuild on first call if buffers aren't allocated yet.
+    /// </summary>
     void PatchChunk(TerrainChunk chunk)
     {
         if (_terrainWidth == 0) return;
-        // For simplicity in this initial implementation, rebuild the full mesh.
-        // Optimise to partial vertex update in a follow-up if needed.
-        BuildFullMesh();
+        if (_vertices == null || _vertices.Length != _terrainWidth * _terrainHeight ||
+            _splatTexture == null)
+        {
+            BuildFullMesh();
+            return;
+        }
+
+        int CS = TerrainChunkData.ChunkSize;
+        int cx = (int)chunk.ChunkX, cz = (int)chunk.ChunkZ;
+        int x0 = cx * CS, z0 = cz * CS;
+        int xEnd = Mathf.Min(_terrainWidth  - 1, x0 + CS);
+        int zEnd = Mathf.Min(_terrainHeight - 1, z0 + CS);
+
+        for (int z = z0; z <= zEnd; z++)
+        for (int x = x0; x <= xEnd; x++)
+        {
+            int vi = z * _terrainWidth + x;
+            _vertices[vi] = new Vector3(x, SampleHeight(x, z), z);
+        }
+        _mesh.vertices = _vertices;
+        _mesh.RecalculateNormals();
+        _mesh.RecalculateBounds();
+
+        // Splat patch: chunk's pixel rect (no overlap — splat is per-pixel, not per-vertex).
+        if (_splatArrays.TryGetValue((cx, cz), out var splat))
+        {
+            int splatW = Mathf.Min(CS, _terrainWidth  - x0);
+            int splatH = Mathf.Min(CS, _terrainHeight - z0);
+            var pixels = new Color32[splatW * splatH];
+            for (int z = 0; z < splatH; z++)
+            for (int x = 0; x < splatW; x++)
+            {
+                int idx = z * CS + x;
+                pixels[z * splatW + x] = new Color32(
+                    splat[idx * 4], splat[idx * 4 + 1],
+                    splat[idx * 4 + 2], splat[idx * 4 + 3]);
+            }
+            _splatTexture.SetPixels32(x0, z0, splatW, splatH, pixels);
+            _splatTexture.Apply(false);
+        }
+
+        OnMeshBuilt?.Invoke(_mesh, transform);
     }
 
     void ClearSplatTexture()

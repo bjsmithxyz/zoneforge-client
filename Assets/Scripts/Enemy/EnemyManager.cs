@@ -71,12 +71,8 @@ public class EnemyManager : MonoBehaviour
 
     void SpawnEnemy(Enemy enemy)
     {
-        // Look up the definition for color/name — iterate since no direct key access
-        EnemyDefinition def = null;
-        foreach (var d in SpacetimeDBManager.Conn.Db.EnemyDef.Iter())
-        {
-            if (d.Id == enemy.EnemyDefId) { def = d; break; }
-        }
+        // Look up the definition for color/name via O(1) cache.
+        LookupCache.EnemyDefs.TryGetValue(enemy.EnemyDefId, out var def);
 
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         go.name = $"Enemy_{enemy.Id}_{def?.Name ?? "Unknown"}";

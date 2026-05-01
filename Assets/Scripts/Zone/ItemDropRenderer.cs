@@ -61,12 +61,8 @@ public class ItemDropRenderer : MonoBehaviour
 
     void SpawnMarker(ItemDrop drop)
     {
-        // Look up def for name/rarity coloring
-        ItemDefinition def = null;
-        foreach (var d in SpacetimeDBManager.Conn.Db.ItemDef.Iter())
-        {
-            if (d.Id == drop.ItemDefId) { def = d; break; }
-        }
+        // Look up def for name/rarity coloring via O(1) cache.
+        LookupCache.ItemDefs.TryGetValue(drop.ItemDefId, out var def);
 
         float y = TerrainRenderer.GetSurfaceHeight(drop.PosX, drop.PosY) + 0.2f;
 

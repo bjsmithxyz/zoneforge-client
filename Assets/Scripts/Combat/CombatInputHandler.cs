@@ -147,16 +147,9 @@ public class CombatInputHandler : MonoBehaviour
 
     private bool IsOnCooldown(ulong abilityId, ulong playerId)
     {
-        long nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        foreach (var cd in SpacetimeDBManager.Conn.Db.PlayerCooldown.Iter())
-        {
-            if (cd.PlayerId != playerId || cd.AbilityId != abilityId) continue;
-            // ReadyAt is a SpacetimeDB Timestamp — compare microseconds
-            long readyUs = (long)cd.ReadyAt.MicrosecondsSinceUnixEpoch;
-            long nowUs = nowMs * 1000L;
-            return readyUs > nowUs;
-        }
-        return false;
+        if (!LookupCache.Cooldowns.TryGetValue((playerId, abilityId), out var cd)) return false;
+        long nowUs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000L;
+        return (long)cd.ReadyAt.MicrosecondsSinceUnixEpoch > nowUs;
     }
 
     private void UpdateSelectionRing()

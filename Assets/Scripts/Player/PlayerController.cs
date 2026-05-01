@@ -132,12 +132,11 @@ public class PlayerController : MonoBehaviour
                 // the NavMesh is still baking on first load.
                 float sendX = pos.x;
                 float sendZ = pos.z;
-                foreach (var zone in SpacetimeDBManager.Conn.Db.Zone.Iter())
+                var activeZone = SpacetimeDBManager.Conn.Db.Zone.Id.Find(SpacetimeDBManager.CurrentZoneId);
+                if (activeZone != null)
                 {
-                    if (zone.Id != SpacetimeDBManager.CurrentZoneId) continue;
-                    sendX = Mathf.Clamp(pos.x, 0f, (float)zone.TerrainWidth  - 1f);
-                    sendZ = Mathf.Clamp(pos.z, 0f, (float)zone.TerrainHeight - 1f);
-                    break;
+                    sendX = Mathf.Clamp(pos.x, 0f, (float)activeZone.TerrainWidth  - 1f);
+                    sendZ = Mathf.Clamp(pos.z, 0f, (float)activeZone.TerrainHeight - 1f);
                 }
                 SpacetimeDBManager.Conn.Reducers.MovePlayer(sendX, sendZ);
                 _lastSentPosition = pos;
