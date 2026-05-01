@@ -684,6 +684,7 @@ namespace SpacetimeDB.Types
                 Reducer.DeleteLootTable args => Reducers.InvokeDeleteLootTable(eventContext, args),
                 Reducer.DeletePortal args => Reducers.InvokeDeletePortal(eventContext, args),
                 Reducer.DeleteSpawnPoint args => Reducers.InvokeDeleteSpawnPoint(eventContext, args),
+                Reducer.DeleteZone args => Reducers.InvokeDeleteZone(eventContext, args),
                 Reducer.DespawnEnemy args => Reducers.InvokeDespawnEnemy(eventContext, args),
                 Reducer.EnterZone args => Reducers.InvokeEnterZone(eventContext, args),
                 Reducer.EquipItem args => Reducers.InvokeEquipItem(eventContext, args),

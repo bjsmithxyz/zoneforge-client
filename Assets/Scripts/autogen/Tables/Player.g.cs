@@ -35,10 +35,20 @@ namespace SpacetimeDB.Types
 
             public readonly IdentityUniqueIndex Identity;
 
+            public sealed class ZoneIdIndex : BTreeIndexBase<ulong>
+            {
+                protected override ulong GetKey(Player row) => row.ZoneId;
+
+                public ZoneIdIndex(PlayerHandle table) : base(table) { }
+            }
+
+            public readonly ZoneIdIndex ZoneId;
+
             internal PlayerHandle(DbConnection conn) : base(conn)
             {
                 Id = new(this);
                 Identity = new(this);
+                ZoneId = new(this);
             }
 
             protected override object GetPrimaryKey(Player row) => row.Id;
@@ -81,11 +91,13 @@ namespace SpacetimeDB.Types
     {
         public global::SpacetimeDB.IxCol<Player, ulong> Id { get; }
         public global::SpacetimeDB.IxCol<Player, SpacetimeDB.Identity> Identity { get; }
+        public global::SpacetimeDB.IxCol<Player, ulong> ZoneId { get; }
 
         public PlayerIxCols(string tableName)
         {
             Id = new global::SpacetimeDB.IxCol<Player, ulong>(tableName, "id");
             Identity = new global::SpacetimeDB.IxCol<Player, SpacetimeDB.Identity>(tableName, "identity");
+            ZoneId = new global::SpacetimeDB.IxCol<Player, ulong>(tableName, "zone_id");
         }
     }
 }
