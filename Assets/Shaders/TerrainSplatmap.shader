@@ -24,18 +24,21 @@ Shader "ZoneForge/TerrainSplatmap"
             #pragma vertex vert
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
-                float2 splatUV    : TEXCOORD1;  // second UV set: normalised [0,1] over full terrain
+                float3 normalOS   : NORMAL;
+                float2 splatUV    : TEXCOORD1;
             };
 
             struct Varyings
             {
                 float4 positionHCS : SV_POSITION;
-                float2 worldXZ     : TEXCOORD0;  // world X/Z for texture tiling
+                float2 worldXZ     : TEXCOORD0;
                 float2 splatUV     : TEXCOORD1;
+                float3 normalWS    : TEXCOORD2;
             };
 
             TEXTURE2D(_GrassTex);  SAMPLER(sampler_GrassTex);
@@ -56,6 +59,7 @@ Shader "ZoneForge/TerrainSplatmap"
                 float3 worldPos = TransformObjectToWorld(IN.positionOS.xyz);
                 OUT.worldXZ = worldPos.xz / _TileScale;
                 OUT.splatUV = IN.splatUV;
+                OUT.normalWS = TransformObjectToWorldNormal(IN.normalOS);
                 return OUT;
             }
 
@@ -68,12 +72,17 @@ Shader "ZoneForge/TerrainSplatmap"
                 half4 stone  = SAMPLE_TEXTURE2D(_StoneTex,  sampler_StoneTex,  IN.worldXZ);
                 half4 ravine = SAMPLE_TEXTURE2D(_RavineTex, sampler_RavineTex, IN.worldXZ);
 
-                half4 color = grass  * splat.r
-                            + dirt   * splat.g
-                            + stone  * splat.b
-                            + ravine * splat.a;
+                half3 albedo = grass.rgb  * splat.r
+                             + dirt.rgb   * splat.g
+                             + stone.rgb  * splat.b
+                             + ravine.rgb * splat.a;
 
-                return half4(color.rgb, 1.0);
+                half3 N = normalize(IN.normalWS);
+                Light mainLight = GetMainLight();
+                half NdotL = saturate(dot(N, mainLight.direction));
+                half3 lighting = mainLight.color.rgb * NdotL + SampleSH(N);
+
+                return half4(albedo * lighting, 1.0);
             }
             ENDHLSL
         }
