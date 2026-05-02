@@ -93,6 +93,9 @@ public class EnemyManager : MonoBehaviour
         var hb = go.AddComponent<EnemyHealthBar>();
         hb.Init(enemy, def);
 
+        // Click-selectable target marker (trigger collider, projectiles fly through).
+        SelectionTarget.Attach(go, enemy.Id, isEnemy: true);
+
         _enemies[enemy.Id] = go;
         CombatManager.Instance?.RegisterEnemyPosition(
             enemy.Id,

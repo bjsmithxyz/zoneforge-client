@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using SpacetimeDB.Types;
 
 /// <summary>
@@ -13,6 +15,17 @@ public class CombatManager : MonoBehaviour
     [Header("Respawn Overlay")]
     [Tooltip("Assign a UI Canvas Text/Image that reads 'Press R to respawn'. Enable/disable in Inspector.")]
     [SerializeField] private GameObject _respawnOverlay;
+
+    [Header("Combat Feel")]
+    [Tooltip("Time.timeScale during a hit-pause. 0.05 freezes briefly without total stop.")]
+    [SerializeField] private float _hitPauseTimeScale = 0.05f;
+    [Tooltip("How long the hit-pause lasts in real seconds.")]
+    [SerializeField] private float _hitPauseDuration = 0.06f;
+    [Tooltip("Damage threshold (>=) that triggers a hit-pause. Avoids freezing on every DoT tick.")]
+    [SerializeField] private int _hitPauseMinDamage = 10;
+
+    private bool _hitPauseRunning;
+    private Image _deathFadeImage;
 
     // Cache of player world positions — updated by PlayerManager via RegisterPlayerPosition
     // Key: player id, Value: world position
@@ -29,6 +42,30 @@ public class CombatManager : MonoBehaviour
 
         if (_respawnOverlay != null)
             _respawnOverlay.SetActive(false);
+
+        BuildDeathFadeOverlay();
+    }
+
+    /// <summary>Procedural full-screen black Image used for the death cam fade.</summary>
+    private void BuildDeathFadeOverlay()
+    {
+        var go = new GameObject("DeathFadeCanvas");
+        go.transform.SetParent(transform, false);
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode  = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 100; // above HUD; respawn overlay should sit above this if assigned
+        go.AddComponent<CanvasScaler>();
+
+        var imgGo = new GameObject("Fade");
+        imgGo.transform.SetParent(go.transform, false);
+        var rect = imgGo.AddComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = Vector2.zero;
+        rect.offsetMax = Vector2.zero;
+        _deathFadeImage = imgGo.AddComponent<Image>();
+        _deathFadeImage.color = new Color(0f, 0f, 0f, 0f);
+        _deathFadeImage.raycastTarget = false; // never block clicks
     }
 
     void OnEnable()
@@ -94,6 +131,11 @@ public class CombatManager : MonoBehaviour
             ZoneForgePoolManager.Instance?.Get("vfx_impact_generic", targetPos + Vector3.up);
         }
 
+        // Hit-pause: brief Time.timeScale freeze for punchy impact. Skip on heals
+        // and on small damage values (DoT ticks shouldn't stutter the world).
+        if (log.DamageDealt >= _hitPauseMinDamage)
+            StartCoroutine(HitPause());
+
         // Floating damage / heal number above target
         if (log.DamageDealt != 0)
         {
@@ -121,9 +163,47 @@ public class CombatManager : MonoBehaviour
         bool justDied = !oldPlayer.IsDead && newPlayer.IsDead;
         bool justRespawned = oldPlayer.IsDead && !newPlayer.IsDead;
 
-        if (justDied && _respawnOverlay != null)
-            _respawnOverlay.SetActive(true);
-        else if (justRespawned && _respawnOverlay != null)
-            _respawnOverlay.SetActive(false);
+        if (justDied)
+        {
+            if (_respawnOverlay != null) _respawnOverlay.SetActive(true);
+            StartCoroutine(FadeDeathOverlay(0f, 0.55f, 0.6f));
+        }
+        else if (justRespawned)
+        {
+            if (_respawnOverlay != null) _respawnOverlay.SetActive(false);
+            StartCoroutine(FadeDeathOverlay(_deathFadeImage != null ? _deathFadeImage.color.a : 0f, 0f, 0.4f));
+        }
+    }
+
+    /// <summary>
+    /// Triggered by OnCombatLogInserted for damage above the hit-pause threshold.
+    /// Briefly drops Time.timeScale for a punchy impact feel.
+    /// </summary>
+    private IEnumerator HitPause()
+    {
+        if (_hitPauseRunning) yield break;
+        _hitPauseRunning = true;
+        float prev = Time.timeScale;
+        Time.timeScale = _hitPauseTimeScale;
+        // Real-time wait so the freeze duration is independent of our own timescale.
+        yield return new WaitForSecondsRealtime(_hitPauseDuration);
+        Time.timeScale = prev;
+        _hitPauseRunning = false;
+    }
+
+    private IEnumerator FadeDeathOverlay(float fromA, float toA, float duration)
+    {
+        if (_deathFadeImage == null) yield break;
+        float elapsed = 0f;
+        var c = _deathFadeImage.color;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            c.a = Mathf.Lerp(fromA, toA, Mathf.Clamp01(elapsed / duration));
+            _deathFadeImage.color = c;
+            yield return null;
+        }
+        c.a = toA;
+        _deathFadeImage.color = c;
     }
 }

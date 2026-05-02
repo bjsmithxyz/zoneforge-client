@@ -240,6 +240,12 @@ public class PlayerManager : MonoBehaviour
         var healthBar = go.AddComponent<PlayerHealthBar>();
         healthBar.Init(player, isLocal);
 
+        // Click-selectable target marker for remote players only — local player
+        // can't be a combat target via Tab/click anyway, and the trigger overlapping
+        // the camera origin would break click-to-target raycasts.
+        if (!isLocal)
+            SelectionTarget.Attach(go, player.Id, isEnemy: false);
+
         _players[player.Id] = go;
         CombatManager.Instance?.RegisterPlayerPosition(
             player.Id,
